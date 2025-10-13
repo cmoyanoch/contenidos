@@ -20,7 +20,6 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuración
-CONTAINER_NAME="db"
 DB_NAME="frontend_db"
 DB_USER="postgres"
 BACKUP_FILE="$1"
@@ -31,6 +30,37 @@ echo -e "${BLUE}========================================${NC}"
 echo ""
 echo -e "${YELLOW}⚠️  Este script solo importa frontend_db${NC}"
 echo -e "${YELLOW}   n8n_db NO se ve afectado${NC}"
+echo ""
+
+# Auto-detectar el nombre del contenedor PostgreSQL
+echo -e "${YELLOW}🔍 Detectando contenedor PostgreSQL...${NC}"
+CONTAINER_NAME=$(docker ps --format "{{.Names}}" | grep -E "postgres|db" | head -1)
+
+if [ -z "$CONTAINER_NAME" ]; then
+    # Intentar por imagen
+    CONTAINER_NAME=$(docker ps --filter "ancestor=postgres" --format "{{.Names}}" | head -1)
+fi
+
+if [ -z "$CONTAINER_NAME" ]; then
+    # Intentar buscar contenedor con puerto 5432
+    CONTAINER_NAME=$(docker ps --format "{{.Names}}\t{{.Ports}}" | grep "5432" | cut -f1 | head -1)
+fi
+
+if [ -z "$CONTAINER_NAME" ]; then
+    echo -e "${RED}❌ Error: No se encontró contenedor PostgreSQL corriendo${NC}"
+    echo -e "${YELLOW}💡 Contenedores disponibles:${NC}"
+    docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+    echo ""
+    echo -e "${YELLOW}💡 Especifica el nombre manualmente: export DB_CONTAINER=nombre_contenedor${NC}"
+    exit 1
+fi
+
+# Permitir override manual
+if [ ! -z "$DB_CONTAINER" ]; then
+    CONTAINER_NAME="$DB_CONTAINER"
+fi
+
+echo -e "${GREEN}✅ Contenedor detectado: ${CONTAINER_NAME}${NC}"
 echo ""
 
 # Validar argumentos

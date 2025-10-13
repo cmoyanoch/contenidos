@@ -21,7 +21,6 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuración
-CONTAINER_NAME="db"
 DB_NAME="frontend_db"  # ⚠️ SOLO frontend_db, NO n8n_db
 DB_USER="postgres"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
@@ -46,15 +45,33 @@ if [ ! -d "$BACKUP_DIR" ]; then
     mkdir -p "$BACKUP_DIR"
 fi
 
-# Verificar que el contenedor de PostgreSQL está corriendo
-echo -e "${YELLOW}🔍 Verificando contenedor de PostgreSQL...${NC}"
-if ! docker ps | grep -q "$CONTAINER_NAME"; then
-    echo -e "${RED}❌ Error: El contenedor '$CONTAINER_NAME' no está corriendo${NC}"
-    echo -e "${YELLOW}💡 Ejecuta: docker compose up -d db${NC}"
+# Auto-detectar el nombre del contenedor PostgreSQL
+echo -e "${YELLOW}🔍 Detectando contenedor PostgreSQL...${NC}"
+CONTAINER_NAME=$(docker ps --format "{{.Names}}" | grep -E "postgres|db" | head -1)
+
+if [ -z "$CONTAINER_NAME" ]; then
+    CONTAINER_NAME=$(docker ps --filter "ancestor=postgres" --format "{{.Names}}" | head -1)
+fi
+
+if [ -z "$CONTAINER_NAME" ]; then
+    CONTAINER_NAME=$(docker ps --format "{{.Names}}\t{{.Ports}}" | grep "5432" | cut -f1 | head -1)
+fi
+
+if [ -z "$CONTAINER_NAME" ]; then
+    echo -e "${RED}❌ Error: No se encontró contenedor PostgreSQL corriendo${NC}"
+    echo -e "${YELLOW}💡 Contenedores disponibles:${NC}"
+    docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+    echo ""
+    echo -e "${YELLOW}💡 Ejecuta: docker compose up -d${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}✅ Contenedor encontrado y corriendo${NC}"
+# Permitir override manual
+if [ ! -z "$DB_CONTAINER" ]; then
+    CONTAINER_NAME="$DB_CONTAINER"
+fi
+
+echo -e "${GREEN}✅ Contenedor detectado: ${CONTAINER_NAME}${NC}"
 echo ""
 
 # Obtener información de la base de datos

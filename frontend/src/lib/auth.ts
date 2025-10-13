@@ -1,6 +1,5 @@
-import bcrypt from 'bcryptjs'
-import type { User } from '@prisma/client'
-import { prisma } from './prisma'
+import bcrypt from 'bcryptjs';
+import { prisma } from './prisma';
 
 export interface RegisterData {
   email: string

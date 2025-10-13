@@ -1,0 +1,14 @@
+# Dockerfile personalizado para N8N con FFmpeg
+FROM docker.n8n.io/n8nio/n8n:latest
+
+# Cambiar a root para instalar paquetes
+USER root
+
+# Instalar FFmpeg
+RUN apk add --no-cache ffmpeg
+
+# Volver al usuario n8n
+USER node
+
+# Establecer directorio de trabajo
+WORKDIR /home/node

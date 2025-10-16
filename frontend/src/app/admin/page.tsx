@@ -486,7 +486,7 @@ export default function AdminPage() {
                   </label>
                   <input
                     type="url"
-                    placeholder="http://localhost:5679/webhook/8f3ed26d-69a1-4d67-8baf-a529fd76519f"
+                    placeholder="http://localhost:5678/webhook/8f3ed26d-69a1-4d67-8baf-a529fd76519f"
                     value={editingWebhook ? editingWebhook.url : newWebhook.url}
                     onChange={(e) => editingWebhook
                       ? setEditingWebhook({...editingWebhook, url: e.target.value})

@@ -7,7 +7,7 @@
 Esta API permite generar videos a partir de texto o imágenes utilizando el modelo Google Veo 3.0. Incluye funcionalidades avanzadas como:
 
 - ✨ Generación de video desde texto (Text-to-Video)
-- 🖼️ Generación de video desde imagen (Image-to-Video) 
+- 🖼️ Generación de video desde imagen (Image-to-Video)
 - 🔒 Rate limiting y manejo de cuotas
 - 🛡️ Circuit breakers para resiliencia
 - 📊 Monitoreo con Celery y Flower
@@ -145,7 +145,7 @@ RATE_LIMIT_WINDOW = 3600   # Ventana en segundos (1 hora)
 
 - **API**: http://localhost:8001
 - **Flower (Celery Monitor)**: http://localhost:5556
-- **N8N Workflows**: http://localhost:5679
+- **N8N Workflows**: http://localhost:5678
 
 ### Logs
 

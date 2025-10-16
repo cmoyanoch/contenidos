@@ -25,8 +25,6 @@ const localizer = momentLocalizer(moment)
 export default function PlanificadorPage() {
   const [showModal, setShowModal] = useState(false)
   const [selectedTheme, setSelectedTheme] = useState<any>(null)
-  const [showN8nLogs, setShowN8nLogs] = useState(false)
-  const [n8nLogs, setN8nLogs] = useState<any[]>([])
   const [syncStatus, setSyncStatus] = useState<string>('')
   const [showWeeklyStrategy, setShowWeeklyStrategy] = useState(false)
   const [showTips, setShowTips] = useState(false)
@@ -39,28 +37,22 @@ export default function PlanificadorPage() {
     startDate: '',
     endDate: ''
   })
-
+  const [showHelpCollapsed, setShowHelpCollapsed] = useState(true) // Inicia colapsado
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [themeToDelete, setThemeToDelete] = useState<any>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [themeToEdit, setThemeToEdit] = useState<any>(null)
+  const [showThemesList, setShowThemesList] = useState(false) // Controla el colapso de la lista de temáticas
+  const [isGenerating, setIsGenerating] = useState(false) // Estado de carga para generación de contenido
   const {
     themes,
     loading,
-    error,
     createTheme,
     deleteTheme,
     validateDateRange,
     detectConflicts,
     generateCalendarEvents
   } = useThemes()
-
-  // Manejar selección de slot (rango de fechas)
-  const handleSelectSlot = ({ start, end }: any) => {
-    setThemeForm({
-      themeName: '',
-      themeDescription: '',
-      startDate: moment(start).format('YYYY-MM-DD'),
-      endDate: moment(end).format('YYYY-MM-DD')
-    })
-    setShowModal(true)
-  }
 
   // Cargar contenido específico del día seleccionado
   const loadCurrentDayContent = async (themeId: string, dayOfWeek: number, contentType: string) => {
@@ -83,6 +75,73 @@ export default function PlanificadorPage() {
     }
   }
 
+  // Función para confirmar eliminación de temática
+  const handleDeleteTheme = (theme: any) => {
+    setThemeToDelete(theme)
+    setShowDeleteConfirm(true)
+  }
+
+  // Función para ejecutar la eliminación después de confirmar
+  const confirmDeleteTheme = async () => {
+    if (!themeToDelete) return
+
+    try {
+      await deleteTheme(themeToDelete.id)
+      setShowDeleteConfirm(false)
+      setThemeToDelete(null)
+      alert(`✅ Temática "${themeToDelete.themeName}" eliminada exitosamente`)
+    } catch (error) {
+      console.error('Error eliminando temática:', error)
+      alert('❌ Error al eliminar la temática')
+    }
+  }
+
+  // Función para abrir modal de edición
+  const handleEditTheme = (theme: any) => {
+    setThemeToEdit(theme)
+    setThemeForm({
+      themeName: theme.themeName,
+      themeDescription: theme.themeDescription || '',
+      startDate: theme.startDate,
+      endDate: theme.endDate
+    })
+    setShowEditModal(true)
+  }
+
+  // Función para guardar cambios de edición
+  const handleSaveEdit = async () => {
+    if (!themeToEdit) return
+
+    // Validar rango de fechas
+    const validation = validateDateRange(themeForm.startDate, themeForm.endDate)
+    if (!validation.valid) {
+      alert(validation.message)
+      return
+    }
+
+    // Detectar conflictos (excluyendo la temática actual)
+    const conflicts = detectConflicts(themeForm.startDate, themeForm.endDate).filter(
+      (t: any) => t.id !== themeToEdit.id
+    )
+    if (conflicts.length > 0) {
+      alert(`Ya existe otra temática en ese rango de fechas: "${conflicts[0].themeName}"`)
+      return
+    }
+
+    try {
+      // Aquí deberías llamar a una función de actualización si existe
+      // Por ahora, eliminamos y creamos de nuevo
+      await deleteTheme(themeToEdit.id)
+      await createTheme(themeForm)
+      setShowEditModal(false)
+      setThemeToEdit(null)
+      setThemeForm({ themeName: '', themeDescription: '', startDate: '', endDate: '' })
+      alert('✅ Temática actualizada exitosamente')
+    } catch {
+      alert('❌ Error al actualizar la temática')
+    }
+  }
+
   // Función para generar contenido del día específico
   const handleGenerateContent = async () => {
     if (!selectedTheme || !selectedTheme.dayContent) {
@@ -90,35 +149,119 @@ export default function PlanificadorPage() {
       return
     }
 
+    setIsGenerating(true)
+
     try {
       console.log('🚀 Iniciando generación de contenido para:', {
         theme_id: selectedTheme.id,
+        theme_name: selectedTheme.themeName,
         day_of_week: selectedTheme.dayContent.dayOfWeek,
-        content_type: selectedTheme.dayContent.type
+        content_type: selectedTheme.dayContent.type,
+        network_name: selectedTheme.dayContent.socialNetworks?.[0] || 'facebook',
+        dayContent_completo: selectedTheme.dayContent // ← DEBUG: Ver todo el objeto
       })
 
       // Llamar DIRECTAMENTE al webhook de N8N para generar contenido
       const N8N_WEBHOOK_URL = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL || 'http://localhost:5678/webhook'
+      const WEBHOOK_ID = '243dbf2d-f504-43b6-86b6-5fb736cc86fc' // ID del webhook del workflow "Planificador de Contenidos"
 
-      const response = await fetch(`${N8N_WEBHOOK_URL}/content-generator`, {
+      // Convertir hora sugerida a formato TIME (HH:MM:SS)
+      const parseTimeTo24Hour = (timeString: string) => {
+        if (!timeString) return '10:00:00'
+
+        // Si ya está en formato 24 horas (HH:MM:SS), retornar
+        if (timeString.match(/^\d{2}:\d{2}:\d{2}$/)) {
+          return timeString
+        }
+
+        // Extraer hora y AM/PM
+        const match = timeString.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+        if (!match) return '10:00:00'
+
+        let hours = parseInt(match[1])
+        const minutes = match[2]
+        const period = match[3].toUpperCase()
+
+        // Convertir a formato 24 horas
+        if (period === 'PM' && hours !== 12) {
+          hours += 12
+        } else if (period === 'AM' && hours === 12) {
+          hours = 0
+        }
+
+        return `${hours.toString().padStart(2, '0')}:${minutes}:00`
+      }
+
+      // Extraer AM/PM
+      const extractPeriod = (timeString: string) => {
+        if (!timeString) return 'AM'
+        const match = timeString.match(/(AM|PM)/i)
+        return match ? match[1].toUpperCase() : 'AM'
+      }
+
+      // Calcular día de la semana desde la fecha seleccionada en el calendario
+      const getDayOfWeek = () => {
+        if (selectedTheme.dayContent.dayOfWeek) {
+          return selectedTheme.dayContent.dayOfWeek
+        }
+        // Si no existe, calcular desde la fecha seleccionada en el calendario
+        const date = selectedTheme.selectedDate ? new Date(selectedTheme.selectedDate) : new Date(selectedTheme.startDate)
+        const dayOfWeek = date.getDay() // 0=Domingo, 1=Lunes, ..., 6=Sábado
+        // Convertir a formato 1=Lunes, 7=Domingo
+        return dayOfWeek === 0 ? 7 : dayOfWeek
+      }
+
+      const dayOfWeekNumber = getDayOfWeek()
+
+      // Formatear fecha a YYYY-MM-DD
+      const formatDateToYYYYMMDD = (dateString: string | Date) => {
+        const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+
+      // Usar la fecha del día seleccionado en el calendario, no la fecha de inicio de la temática
+      const selectedDate = selectedTheme.selectedDate || selectedTheme.startDate
+
+      const payload = {
+        // Datos de la temática
+        theme_id: selectedTheme.id,
+        theme_name: selectedTheme.themeName,
+
+        // Datos del contenido programado
+        day_of_week: dayOfWeekNumber,
+        content_type: selectedTheme.dayContent.type,
+        duration: selectedTheme.dayContent.duration,
+
+        // Datos de programación
+        scheduled_date: formatDateToYYYYMMDD(selectedDate), // Fecha del día seleccionado en el calendario
+        optimal_time_24h: parseTimeTo24Hour(selectedTheme.dayContent.suggestedTime || '10:00:00'), // Formato HH:MM:SS
+        time_period: extractPeriod(selectedTheme.dayContent.suggestedTime || 'AM'), // AM o PM
+
+        // Redes sociales (tomar la primera o todas)
+        network_name: selectedTheme.dayContent.socialNetworks?.[0],
+
+        // Secuencia de rotación
+        rotation_sequence: 1,
+
+        // Flags
+        is_active: true
+      }
+
+      console.log('📤 Enviando datos al webhook:', {
+        url: `${N8N_WEBHOOK_URL}/${WEBHOOK_ID}`,
+        method: 'POST',
+        payload: payload
+      })
+
+      const response = await fetch(`${N8N_WEBHOOK_URL}/${WEBHOOK_ID}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'generate_content',
-          theme_id: selectedTheme.id,
-          theme_name: selectedTheme.themeName,
-          theme_description: selectedTheme.themeDescription,
-          day_of_week: selectedTheme.dayContent.dayOfWeek,
-          content_type: selectedTheme.dayContent.type,
-          content_title: selectedTheme.dayContent.title,
-          content_description: selectedTheme.dayContent.description,
-          suggested_time: selectedTheme.dayContent.suggestedTime,
-          duration: selectedTheme.dayContent.duration,
-          scheduled_date: selectedTheme.startDate,
-          social_networks: selectedTheme.dayContent.socialNetworks || []
-        })
+        body: JSON.stringify(payload)
       })
 
       if (!response.ok) {
@@ -142,6 +285,8 @@ export default function PlanificadorPage() {
     } catch (error) {
       console.error('❌ Error generando contenido:', error)
       alert(`❌ Error al generar contenido: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+    } finally {
+      setIsGenerating(false)
     }
   }
 
@@ -162,7 +307,8 @@ export default function PlanificadorPage() {
       ...event.resource.theme,
       dayContent: event.resource.dayContent,
       dayKey: event.resource.dayKey,
-      eventTitle: event.title
+      eventTitle: event.title,
+      selectedDate: event.start // ← Fecha del día seleccionado en el calendario
     }
 
     console.log('🎯 selectedThemeData:', selectedThemeData)
@@ -293,7 +439,7 @@ export default function PlanificadorPage() {
   const loadN8nLogs = async () => {
     try {
       // Abrir la interfaz de N8N en una nueva pestaña
-      const N8N_URL = process.env.NEXT_PUBLIC_N8N_URL || 'http://localhost:5679'
+      const N8N_URL = process.env.NEXT_PUBLIC_N8N_URL || 'http://localhost:5678'
       window.open(`${N8N_URL}/workflow`, '_blank')
 
       alert('ℹ️ Se abrirá la interfaz de N8N donde puedes ver todos los workflows y sus ejecuciones')
@@ -573,6 +719,7 @@ export default function PlanificadorPage() {
     console.log('📅 Planificador - Temáticas disponibles:', themes)
   }
 
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 pt-20 pb-8">
@@ -588,82 +735,138 @@ export default function PlanificadorPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 pt-20 pb-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+        <div className="flex flex-row gap-2 mb-4 justify-between">
+          {/* TITULOS Y DESCRIPCION*/}
+           <div className="gap-2">
+             <h1 className="text-3xl font-bold text-gray-900 mb-2">
             📅 Planificador de Temáticas
-          </h1>
-          <p className="text-gray-600">
+             </h1>
+             <p className="block text-sm font-medium text-gray-700">
             Planifica tus contenidos temáticos con distribución semanal automática
-          </p>
+             </p>
+          </div>
+          {/* Botones de N8N */}
+          <div className="flex items-center justify-between">
+          {/* Botón para crear temática */}
+           <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            title="Crear nueva temática" >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus w-5 h-5 mr-2"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+              Nueva Temática
+           </button>
+
+          </div>
         </div>
 
         {/* Controles del planificador */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between">
-          {/* Botón para crear temática */}
-          <button
-            onClick={() => setShowModal(true)}
-            className="px-4 py-2 rounded-md bg-blue-600 text-white px-6 py-3 rounded-md transition-all duration-200 font-medium shadow-lg h-full"
-          >
-            ➕ Nueva Temática
-          </button>
-
-          {/* Botones de N8N */}
-          <div className="flex gap-2">
-            <button
-              onClick={syncWithN8N}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-medium shadow-lg"
-              title="Sincronizar temáticas con N8N"
+        <div className="mb-6">
+          {/* Estadísticas rápidas del planificador */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Tarjeta de Temáticas Activas - Colapsable */}
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg shadow-lg overflow-hidden">
+            {/* Header clickeable */}
+            <button onClick={() => setShowThemesList(!showThemesList)}
+              className="w-full px-3 pt-2 pb-2 flex items-center justify-between gap-2 hover:bg-blue-700/30 transition-colors"
             >
-              🔄 Sync N8N
-            </button>
-            <button
-              onClick={loadN8nLogs}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm font-medium shadow-lg"
-              title="Abrir interfaz de N8N"
-            >
-              🔗 Abrir N8N
-            </button>
-          </div>
-        </div>
-
-      {/* Estadísticas rápidas del planificador */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-4 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-blue-100 text-sm">Temáticas Activas</p>
-                <p className="text-2xl font-bold">{themes.length}</p>
+              <div className="flex items-center gap-2">
+                <div>
+                  <p className="text-blue-100 text-xs">Temáticas Activas</p>
+                  <p className="text-2xl font-bold text-left">{themes.length}</p>
+                </div>
               </div>
-              <div className="text-blue-200 text-2xl">🎯</div>
-            </div>
+              <div className="flex items-center gap-2">
+                <div className="text-blue-200 text-2xl">🎯</div>
+
+                {/* Mensaje cuando no hay temáticas */}
+                {themes.length > 0 && (
+                <span className="text-blue-200 text-xl transition-transform duration-200" style={{ transform: showThemesList ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                  ▼
+                </span>
+                )}
+              </div>
+            </button>
+
+            {/* Lista de temáticas (expandible) */}
+            {showThemesList && themes.length > 0 && (
+              <div className="px-2 pb-3 space-y-2 max-h-[500px] overflow-y-auto">
+                {themes.map((theme) => {
+                  const themeEvents = events.filter((e: any) => e.resource?.theme?.id === theme.id)
+
+                  return (
+                    <div
+                      key={theme.id}
+                      className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20 hover:bg-white/20 transition-colors"
+                    >
+                      {/* Nombre de la temática */}
+                      <h3 className="text-white font-semibold text-sm mb-2 line-clamp-1">
+                        {theme.themeName}
+                      </h3>
+
+                      {/* Fechas */}
+                      <div className="flex items-center gap-2 text-xs text-blue-100 mb-2">
+                        <span>📅</span>
+                        <span>
+                          {new Date(theme.startDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} - {' '}
+                          {new Date(theme.endDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                        </span>
+                      </div>
+
+                      {/* Botones de acción */}
+                      <div className="flex gap-2 pt-2 border-t border-white/20">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditTheme(theme)
+                          }}
+                          className="flex-1 p-1 bg-white/20 text-white rounded hover:bg-white/30 transition-colors text-xs font-medium"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteTheme(theme)
+                          }}
+                          className="flex-1 p-1 bg-red-500/30 text-white rounded hover:bg-red-500/40 transition-colors text-xs font-medium"
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
           </div>
 
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg p-4 shadow-lg">
-            <div className="flex items-center justify-between">
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg px-3 pt-2 shadow-lg">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-purple-100 text-sm">Eventos Programados</p>
+                <p className="text-purple-100 text-xs">Eventos Programados</p>
                 <p className="text-2xl font-bold">{events.length}</p>
               </div>
               <div className="text-purple-200 text-2xl">📅</div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg p-4 shadow-lg">
-            <div className="flex items-center justify-between">
+          <div className="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg px-3 pt-2 shadow-lg">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-green-100 text-sm">Días con Contenido</p>
+                <p className="text-green-100 text-xs">Días con Contenido</p>
                 <p className="text-2xl font-bold">{new Set(events.map(e => e.start.toDateString())).size}</p>
               </div>
               <div className="text-green-200 text-2xl">📊</div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg p-4 shadow-lg">
-            <div className="flex items-center justify-between">
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg px-3 pt-2 shadow-lg">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-orange-100 text-sm">Próximo Evento</p>
+                <p className="text-orange-100 text-xs">Próximo Evento</p>
                 <p className="text-lg font-bold">
                   {events.length > 0 ? new Date(events[0].start).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }) : 'N/A'}
                 </p>
@@ -671,9 +874,7 @@ export default function PlanificadorPage() {
               <div className="text-orange-200 text-2xl">⏰</div>
             </div>
           </div>
-        </div>
-
-
+          </div>
         </div>
 
         {/* Estado de sincronización N8N */}
@@ -685,10 +886,6 @@ export default function PlanificadorPage() {
             </div>
           </div>
         )}
-
-
-
-
 
         {/* Mensaje cuando no hay eventos */}
         {events.length === 0 && themes.length === 0 && (
@@ -727,7 +924,7 @@ export default function PlanificadorPage() {
         )}
 
         {/* Calendario */}
-        <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <div className="bg-white rounded-lg shadow-lg p-6">
         <style dangerouslySetInnerHTML={{
           __html: `
             /* Estilos para días de fin de semana en React Big Calendar */
@@ -783,7 +980,7 @@ export default function PlanificadorPage() {
               border-radius: 4px !important;
               border-left: none !important;
               border-right: none !important;
-              z-index: 50;
+              z-index: 48;
               /* El backgroundColor se maneja via style inline */
             }
 
@@ -934,7 +1131,7 @@ export default function PlanificadorPage() {
                     type="text"
                     value={themeForm.themeName}
                     onChange={(e) => setThemeForm({ ...themeForm, themeName: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-500"
+                    className="text-sm font-medium text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Ej: Seguro de Vida"
                     required
                   />
@@ -949,7 +1146,7 @@ export default function PlanificadorPage() {
                     value={themeForm.themeDescription}
                     onChange={(e) => setThemeForm({ ...themeForm, themeDescription: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-500"
+                    className="text-sm font-medium text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Describe la temática..."
                   />
                 </div>
@@ -964,7 +1161,7 @@ export default function PlanificadorPage() {
                     value={themeForm.startDate}
                     onChange={(e) => setThemeForm({ ...themeForm, startDate: e.target.value })}
                     min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-500"
+                    className="text-sm font-medium text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
                 </div>
@@ -979,7 +1176,7 @@ export default function PlanificadorPage() {
                     value={themeForm.endDate}
                     onChange={(e) => setThemeForm({ ...themeForm, endDate: e.target.value })}
                     min={themeForm.startDate || new Date().toISOString().split('T')[0]}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-500"
+                    className="text-sm font-medium text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
                 </div>
@@ -1143,7 +1340,7 @@ export default function PlanificadorPage() {
                                 <div className="bg-white rounded-lg p-3 text-left">
                                   <div className="flex items-center space-x-2 mb-2">
                                     <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm">👤</div>
-                                    <span className="text-sm font-medium">Persona profesional</span>
+                                    <span className="text-sm font-medium text-gray-700">Persona profesional</span>
                                   </div>
                                   <p className="text-xs text-gray-600">Hablando sobre {selectedTheme.themeName} con credibilidad y confianza</p>
                                 </div>
@@ -1221,6 +1418,7 @@ export default function PlanificadorPage() {
                               </div>
                             )}
 
+
                             {/* Botón Generar integrado */}
                             <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                               <div className="flex items-center gap-2 mb-2">
@@ -1232,9 +1430,21 @@ export default function PlanificadorPage() {
                               </p>
                               <button
                                 onClick={handleGenerateContent}
-                                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                                disabled={isGenerating}
+                                className={`px-6 py-2 rounded-lg transition-colors ${
+                                  isGenerating
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-600 hover:bg-blue-700'
+                                } text-white`}
                               >
-                                🚀 Generar Contenido
+                                {isGenerating ? (
+                                  <>
+                                    <span className="inline-block animate-spin mr-2">⏳</span>
+                                    Generando...
+                                  </>
+                                ) : (
+                                  <>🚀 Generar Contenido</>
+                                )}
                               </button>
                             </div>
                           </div>
@@ -1271,8 +1481,8 @@ export default function PlanificadorPage() {
           )
         })()}
 
-                {/* Información sobre diferenciación de días y colores por temática */}
-        <div className="max-w-7xl mx-auto mt-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-2">
+        {/* Información sobre diferenciación de días y colores por temática */}
+        <div className="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-2">
           <div
             className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => setShowTips(!showTips)}
@@ -1348,7 +1558,7 @@ export default function PlanificadorPage() {
         </div>
 
         {/* Tabla de Estrategia de Redes Sociales */}
-        <div className="max-w-7xl mx-auto mt-6 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-2">
+        <div className="mt-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-2">
           <div
             className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => setShowWeeklyStrategy(!showWeeklyStrategy)}
@@ -1495,20 +1705,186 @@ export default function PlanificadorPage() {
           </div>
         </div>
 
-        {/* Información adicional */}
-        <div className="max-w-7xl mx-auto mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">
-            💡 Cómo usar el Planificador
-          </h3>
-          <ul className="list-disc list-inside text-blue-800 space-y-1">
-            <li>Selecciona un rango de fechas en el calendario para crear una nueva temática</li>
-            <li>Cada temática aplica automáticamente una plantilla semanal de contenidos</li>
-            <li>El rango mínimo es de 1 semana y el máximo de 3 meses</li>
-            <li>No se pueden solapar temáticas en las mismas fechas</li>
-            <li>Haz clic en una temática existente para ver detalles o eliminarla</li>
-          </ul>
-        </div>
-      </div>
+        {/* Información adicional - Colapsable */}
+        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setShowHelpCollapsed(!showHelpCollapsed)}
+            className="w-full p-3 flex items-center justify-between hover:bg-blue-100 transition-colors"
+          >
+            <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
+              <span>💡</span>
+              <span>Cómo usar el Planificador</span>
+            </h3>
+            <span className="text-blue-600 text-xl transition-transform duration-200" style={{ transform: showHelpCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+              ▼
+            </span>
+          </button>
 
+          {!showHelpCollapsed && (
+            <div className="px-3 pb-3">
+              <ul className="list-disc list-inside text-blue-800 space-y-1">
+                <li>Selecciona un rango de fechas en el calendario para crear una nueva temática</li>
+                <li>Cada temática aplica automáticamente una plantilla semanal de contenidos</li>
+                <li>El rango mínimo es de 1 semana y el máximo de 3 meses</li>
+                <li>No se pueden solapar temáticas en las mismas fechas</li>
+                <li>Usa los botones &quot;Editar&quot; y &quot;Eliminar&quot; en cada temática para gestionarlas</li>
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Modal de confirmación de eliminación */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">🗑️</span>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Confirmar Eliminación
+                  </h2>
+                </div>
+
+                <p className="text-gray-600 mb-4">
+                  ¿Estás seguro de que deseas eliminar la temática <strong>&quot;{themeToDelete?.themeName}&quot;</strong>?
+                </p>
+
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-red-800">
+                    ⚠️ Esta acción no se puede deshacer. Se eliminarán todos los eventos asociados a esta temática.
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false)
+                      setThemeToDelete(null)
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDeleteTheme}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-medium"
+                  >
+                    Sí, Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de edición de temática */}
+        {showEditModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full">
+              <div className="border-b border-gray-200 p-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    ✏️ Editar Temática
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowEditModal(false)
+                      setThemeToEdit(null)
+                      setThemeForm({ themeName: '', themeDescription: '', startDate: '', endDate: '' })
+                    }}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} className="p-6 space-y-4">
+                {/* Nombre de la temática */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nombre de la Temática *
+                  </label>
+                  <input
+                    type="text"
+                    value={themeForm.themeName}
+                    onChange={(e) => setThemeForm({ ...themeForm, themeName: e.target.value })}
+                    className="text-sm font-medium text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Ej: Seguro de Vida"
+                    required
+                  />
+                </div>
+
+                {/* Descripción */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descripción (Opcional)
+                  </label>
+                  <textarea
+                    value={themeForm.themeDescription}
+                    onChange={(e) => setThemeForm({ ...themeForm, themeDescription: e.target.value })}
+                    className="text-sm font-medium text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={3}
+                    placeholder="Describe el objetivo de esta temática..."
+                  />
+                </div>
+
+                {/* Fechas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fecha de Inicio *
+                    </label>
+                    <input
+                      type="date"
+                      value={themeForm.startDate}
+                      onChange={(e) => setThemeForm({ ...themeForm, startDate: e.target.value })}
+                      className="text-sm font-medium text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fecha de Fin *
+                    </label>
+                    <input
+                      type="date"
+                      value={themeForm.endDate}
+                      onChange={(e) => setThemeForm({ ...themeForm, endDate: e.target.value })}
+                      className="text-sm font-medium text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Botones */}
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false)
+                      setThemeToEdit(null)
+                      setThemeForm({ themeName: '', themeDescription: '', startDate: '', endDate: '' })
+                    }}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors font-medium"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Guardar Cambios
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
   )
 }

@@ -67,32 +67,32 @@ show_space_before() {
 # Función para limpiar imágenes y cache
 clean_docker() {
     log "🧹 Iniciando limpieza de Docker..."
-    
+
     # Limpiar imágenes dangling y no utilizadas
     info "Eliminando imágenes sin etiquetas y no utilizadas..."
     IMAGES_REMOVED=$(docker image prune -a -f | grep "Total reclaimed space" | awk '{print $4 $5}' || echo "0B")
     log "✅ Imágenes eliminadas. Espacio liberado: ${IMAGES_REMOVED}"
-    
+
     # Limpiar build cache
     info "Limpiando build cache..."
     CACHE_REMOVED=$(docker builder prune -a -f | grep "Total:" | awk '{print $2}' || echo "0B")
     log "✅ Build cache limpiado. Espacio liberado: ${CACHE_REMOVED}"
-    
+
     # Limpiar contenedores parados (si los hay)
     info "Eliminando contenedores parados..."
     docker container prune -f >/dev/null 2>&1 || true
-    
+
     # Limpiar redes no utilizadas
     info "Eliminando redes no utilizadas..."
     docker network prune -f >/dev/null 2>&1 || true
-    
+
     log "✅ Limpieza de Docker completada"
 }
 
 # Función para compilar el proyecto
 build_project() {
     log "🏗️ Iniciando compilación del proyecto..."
-    
+
     info "Compilando contenedores sin cache..."
     docker compose build --no-cache
     log "✅ Compilación completada exitosamente"
@@ -102,33 +102,33 @@ build_project() {
 start_services() {
     log "🚀 Iniciando servicios..."
     docker compose up -d
-    
+
     # Esperar un momento para que los servicios se inicien
     info "Esperando que los servicios se inicien completamente..."
     sleep 10
-    
+
     log "✅ Servicios iniciados"
 }
 
 # Función para verificar servicios
 verify_services() {
     log "🔍 Verificando estado de los servicios..."
-    
+
     # Mostrar estado de contenedores
     echo -e "\n${BLUE}=== Estado de Contenedores ===${NC}"
     docker compose ps
-    
+
     # Verificar API health
     info "Verificando health check de la API..."
     sleep 5  # Dar tiempo adicional para que la API se inicie
-    
+
     local max_attempts=6
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         if curl -s http://localhost:8001/health/ >/dev/null 2>&1; then
             log "✅ API respondiendo correctamente"
-            
+
             # Mostrar información de salud
             echo -e "\n${BLUE}=== Health Check API ===${NC}"
             curl -s http://localhost:8001/health/ | jq . || curl -s http://localhost:8001/health/
@@ -139,7 +139,7 @@ verify_services() {
             ((attempt++))
         fi
     done
-    
+
     if [ $attempt -gt $max_attempts ]; then
         error "La API no respondió después de $max_attempts intentos"
         return 1
@@ -157,23 +157,23 @@ show_summary() {
     echo -e "\n${GREEN}========================================${NC}"
     echo -e "${GREEN}   COMPILACIÓN Y LIMPIEZA COMPLETADA   ${NC}"
     echo -e "${GREEN}========================================${NC}"
-    
+
     echo -e "\n${BLUE}✅ Tareas completadas:${NC}"
     echo "   • Servicios detenidos correctamente"
     echo "   • Docker limpiado (imágenes + build cache)"
     echo "   • Proyecto recompilado sin cache"
     echo "   • Servicios reiniciados"
     echo "   • Health checks verificados"
-    
+
     echo -e "\n${BLUE}🌐 Servicios disponibles:${NC}"
     echo "   • API:      http://localhost:8001/health/"
     echo "   • API RRSS: http://localhost:8002/docs"
     echo "   • Flower:   http://localhost:5556/"
-    echo "   • N8N:      http://localhost:5679/"
-    
+    echo "   • N8N:      http://localhost:5678/"
+
     echo -e "\n${BLUE}🐳 Contenedores activos:${NC}"
     docker compose ps --format "table {{.Service}}\t{{.Status}}\t{{.Ports}}"
-    
+
     echo -e "\n${GREEN}🎉 ¡Proyecto listo para usar!${NC}"
 }
 
@@ -182,23 +182,23 @@ main() {
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}   INICIANDO COMPILACIÓN Y LIMPIEZA   ${NC}"
     echo -e "${GREEN}========================================${NC}"
-    
+
     # Verificar prerequisitos
     check_docker
-    
+
     # Mostrar espacio inicial
     show_space_before
-    
+
     # Ejecutar proceso completo
     stop_services
     clean_docker
     build_project
     start_services
     verify_services
-    
+
     # Mostrar espacio final
     show_space_after
-    
+
     # Resumen
     show_summary
 }

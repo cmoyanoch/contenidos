@@ -2,11 +2,13 @@
 API principal para generación de videos con Veo 3.0
 """
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
 import uvicorn
+from pathlib import Path
 
 from api.routes import health_router, video_router
 from api.content_generated_routes import router as content_generated_router
@@ -14,6 +16,8 @@ from api.content_routes import content_router
 from api.monitoring_routes import router as monitoring_router
 from api.optimization_routes import router as optimization_router
 from api.image_formats_routes import image_formats_router
+from api.staff_routes import router as staff_router
+from api.branding_routes import router as branding_router
 from middleware.usage_monitor import UsageMonitorMiddleware
 from api.rate_limiting_routes import router as rate_limiting_router
 from middleware.rate_limiting import rate_limit_middleware
@@ -74,6 +78,63 @@ app.middleware("http")(rate_limit_middleware)
 # Agregar middleware de monitoreo de uso
 app.add_middleware(UsageMonitorMiddleware)
 
+# Endpoint para servir iconos de branding (DEBE estar ANTES del endpoint genérico)
+@app.get("/uploads/icons/{icon_path:path}")
+async def serve_icons(icon_path: str):
+    """Servir iconos desde /app/uploads/icons/"""
+    try:
+        file_path = Path(f"/app/uploads/icons/{icon_path}")
+
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail=f"Icon not found: {icon_path}")
+
+        if not file_path.is_file():
+            raise HTTPException(status_code=400, detail="Path is not a file")
+
+        # Determinar media type basado en extensión
+        media_type = "image/png"  # default
+        if icon_path.endswith('.jpg') or icon_path.endswith('.jpeg'):
+            media_type = "image/jpeg"
+        elif icon_path.endswith('.gif'):
+            media_type = "image/gif"
+        elif icon_path.endswith('.svg'):
+            media_type = "image/svg+xml"
+
+        return FileResponse(
+            path=str(file_path),
+            media_type=media_type,
+            filename=file_path.name
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving icon: {e}")
+        raise HTTPException(status_code=500, detail=f"Error serving icon: {str(e)}")
+
+# Endpoint para servir imágenes del staff (genérico, debe estar DESPUÉS de endpoints específicos)
+@app.get("/uploads/{image_path:path}")
+async def serve_images(image_path: str):
+    """Servir imágenes desde /app/uploads/banana/"""
+    try:
+        file_path = Path(f"/app/uploads/banana/{image_path}")
+
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail=f"Image not found: {image_path}")
+
+        if not file_path.is_file():
+            raise HTTPException(status_code=400, detail="Path is not a file")
+
+        return FileResponse(
+            path=str(file_path),
+            media_type="image/png",
+            filename=file_path.name
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving image: {e}")
+        raise HTTPException(status_code=500, detail=f"Error serving image: {str(e)}")
+
 # Incluir routers
 app.include_router(health_router, prefix="/health", tags=["health"])
 app.include_router(video_router, prefix="/api/v1", tags=["videos"])
@@ -83,6 +144,8 @@ app.include_router(monitoring_router, tags=["monitoring"])
 app.include_router(optimization_router, tags=["optimization"])
 app.include_router(rate_limiting_router, tags=["rate-limiting"])
 app.include_router(image_formats_router)
+app.include_router(staff_router, tags=["staff"])
+app.include_router(branding_router, tags=["branding"])
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):

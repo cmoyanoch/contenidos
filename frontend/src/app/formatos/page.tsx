@@ -42,7 +42,6 @@ export default function FormatsPage() {
   const [imageFormats, setImageFormats] = useState<ImageFormat[]>([])
   const [loading, setLoading] = useState(true)
   const [showCaptureModal, setShowCaptureModal] = useState(false)
-  const [selectedFormat, setSelectedFormat] = useState<VideoFormat | ImageFormat | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
 
@@ -54,13 +53,56 @@ export default function FormatsPage() {
     tags: '',
     use_case: '',
     file: null as File | null,
+    content_type: 'video_person' as 'video_person' | 'image_stats' | 'video_avatar' | 'cta_post' | '',
   })
+
+  // Mapeo de content_type a categoría y tags
+  const contentTypeMapping = {
+    'video_person': {
+      category: 'promotional',
+      tags: 'real-person, ugc, authentic',
+      example: 'Persona hablando a cámara, estilo UGC casual',
+      media_type: 'video'
+    },
+    'image_stats': {
+      category: 'educational',
+      tags: 'statistics, infographic, data-visualization',
+      example: 'Infografía con datos y gráficos',
+      media_type: 'image'
+    },
+    'video_avatar': {
+      category: 'educational',
+      tags: 'animation, avatar, pixar-style',
+      example: 'Avatar 3D estilo Pixar, colores vibrantes',
+      media_type: 'video'
+    },
+    'cta_post': {
+      category: 'promotional',
+      tags: 'cta, call-to-action, conversion',
+      example: 'Post vertical con llamada a la acción',
+      media_type: 'video'
+    }
+  }
+
+  // Función para actualizar categoría y tags según content_type
+  const handleContentTypeChange = (contentType: string) => {
+    const mapping = contentTypeMapping[contentType as keyof typeof contentTypeMapping]
+    if (mapping) {
+      setCaptureForm({
+        ...captureForm,
+        content_type: contentType as 'video_person' | 'image_stats' | 'video_avatar' | 'cta_post',
+        category: mapping.category,
+        tags: mapping.tags
+      })
+    }
+  }
   const [capturing, setCapturing] = useState(false)
   const [captureProgress, setCaptureProgress] = useState(0)
 
   // Load formats on mount and when type changes
   useEffect(() => {
     loadFormats()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formatType, categoryFilter])
 
   const loadFormats = async () => {
@@ -97,6 +139,11 @@ export default function FormatsPage() {
       return
     }
 
+    if (!captureForm.content_type) {
+      alert('Por favor selecciona el tipo de contenido')
+      return
+    }
+
     try {
       setCapturing(true)
       setCaptureProgress(0)
@@ -104,19 +151,24 @@ export default function FormatsPage() {
       const formData = new FormData()
       formData.append('data', captureForm.file)
       formData.append('format_name', captureForm.format_name)
+      formData.append('content_type', captureForm.content_type)
       formData.append('category', captureForm.category)
+      formData.append('tags', captureForm.tags)
+      formData.append('is_template', 'true')
 
-      if (formatType === 'video') {
-        formData.append('description', captureForm.description)
-        formData.append('tags', captureForm.tags)
-        formData.append('use_case', captureForm.use_case)
-        formData.append('is_template', 'true')
-      }
+      // Nota: description y use_case se generarán del análisis del archivo
 
       setCaptureProgress(30)
 
+      // Determinar el webhook correcto basado en el tipo de contenido
+      const contentType = captureForm.content_type
+      const isVideo = contentType === 'video_person' || contentType === 'video_avatar' || contentType === 'cta_post'
+      const webhookUrl = isVideo
+        ? 'http://localhost:5678/webhook/2993b51b-bc56-4068-ac50-710be6239549'  // Webhook para videos
+        : 'http://localhost:5678/webhook/format-capture'  // Webhook para imágenes
+
       // Call N8N webhook
-      const response = await fetch('http://localhost:5679/webhook/format-capture', {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         body: formData,
       })
@@ -142,6 +194,7 @@ export default function FormatsPage() {
           tags: '',
           use_case: '',
           file: null,
+          content_type: 'video_person',
         })
         loadFormats()
       } else {
@@ -194,14 +247,13 @@ export default function FormatsPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 mt-8">
-      <div className="max-w-7xl mx-auto mt-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 pt-20 pb-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            📹 Biblioteca de Formatos
+        <div className="gap-2 mb-4">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">📹 Biblioteca de Formatos
           </h1>
-          <p className="text-gray-600">
+          <p className="block text-sm font-medium text-gray-700">
             Gestiona formatos de videos e imágenes para replicación con IA
           </p>
         </div>
@@ -294,7 +346,7 @@ export default function FormatsPage() {
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600"
               >
                 <option value="all">Todas las categorías</option>
                 {Array.from(new Set(currentFormats.map(f => f.category))).map(category => (
@@ -357,22 +409,22 @@ export default function FormatsPage() {
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-gray-500">Aspecto:</span>
-                      <span className="ml-1 font-semibold">{format.aspect_ratio || 'N/A'}</span>
+                      <span className="ml-1 font-semibold text-gray-600">{format.aspect_ratio || 'N/A'}</span>
                     </div>
                     <div>
                       <span className="text-gray-500">Uso:</span>
-                      <span className="ml-1 font-semibold">{format.usage_count}</span>
+                      <span className="ml-1 font-semibold text-gray-600">{format.usage_count}</span>
                     </div>
-                    {formatType === 'video' && (
+                    {formatType === 'video' && 'recommended_veo_model' in format && (
                       <div>
                         <span className="text-gray-500">Modelo:</span>
-                        <span className="ml-1 font-semibold text-xs">{format.recommended_veo_model || 'N/A'}</span>
+                        <span className="ml-1 font-semibold text-xs text-gray-600">{format.recommended_veo_model || 'N/A'}</span>
                       </div>
                     )}
-                    {formatType === 'image' && (
+                    {formatType === 'image' && 'recommended_ai_model' in format && (
                       <div>
                         <span className="text-gray-500">Modelo:</span>
-                        <span className="ml-1 font-semibold text-xs">{format.recommended_ai_model || 'N/A'}</span>
+                        <span className="ml-1 font-semibold text-xs text-gray-600">{format.recommended_ai_model || 'N/A'}</span>
                       </div>
                     )}
                   </div>
@@ -437,18 +489,54 @@ export default function FormatsPage() {
                   </button>
                 </div>
 
+                {/* 🆕 Selector de Content Type */}
+                <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <span className="text-2xl">📋</span>
+                    Tipo de Contenido
+                  </h3>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Selecciona el tipo de contenido *
+                    </label>
+                    <select
+                      value={captureForm.content_type}
+                      onChange={(e) => handleContentTypeChange(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base text-sm font-medium text-gray-700"
+                      required
+                    >
+                      <option value="">-- Selecciona el tipo de contenido --</option>
+                      <option value="video_person">📹 Video con Persona Real</option>
+                      <option value="image_stats">🖼️ Imagen con Estadísticas</option>
+                      <option value="video_avatar">🤖 Video con Avatar Animado</option>
+                      <option value="cta_post">📢 Post con Call to Action</option>
+                    </select>
+                  </div>
+
+                </div>
+
                 <form onSubmit={handleCaptureSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {formatType === 'video' ? 'Video' : 'Imagen'} *
+                      Archivo ({contentTypeMapping[captureForm.content_type as keyof typeof contentTypeMapping]?.media_type || 'video/imagen'}) *
                     </label>
                     <input
                       type="file"
-                      accept={formatType === 'video' ? 'video/*' : 'image/*'}
+                      accept={
+                        captureForm.content_type && contentTypeMapping[captureForm.content_type as keyof typeof contentTypeMapping]?.media_type === 'image'
+                          ? 'image/*'
+                          : 'video/*'
+                      }
                       onChange={(e) => setCaptureForm({ ...captureForm, file: e.target.files?.[0] || null })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="text-sm font-medium text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
+                    {captureForm.content_type && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        💡 El sistema analizará el archivo automáticamente para generar la descripción y caso de uso
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -459,82 +547,19 @@ export default function FormatsPage() {
                       type="text"
                       value={captureForm.format_name}
                       onChange={(e) => setCaptureForm({ ...captureForm, format_name: e.target.value })}
-                      placeholder="Ej: Modern Minimalist"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ej: Promotional Video - Real Person v1"
+                      className="text-sm font-medium text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Categoría *
-                    </label>
-                    <select
-                      value={captureForm.category}
-                      onChange={(e) => setCaptureForm({ ...captureForm, category: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {formatType === 'video' ? (
-                        <>
-                          <option value="promotional">Promocional</option>
-                          <option value="educational">Educativo</option>
-                          <option value="social">Social</option>
-                          <option value="product">Producto</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="social-media">Social Media</option>
-                          <option value="marketing">Marketing</option>
-                          <option value="product">Producto</option>
-                          <option value="infographic">Infografía</option>
-                          <option value="banner">Banner</option>
-                        </>
-                      )}
-                    </select>
+                  {/* Nota informativa */}
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>ℹ️ Nota:</strong> La descripción, caso de uso, categoría y tags se generarán automáticamente
+                      del análisis del archivo. No necesitas completarlos manualmente.
+                    </p>
                   </div>
-
-                  {formatType === 'video' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Descripción
-                        </label>
-                        <textarea
-                          value={captureForm.description}
-                          onChange={(e) => setCaptureForm({ ...captureForm, description: e.target.value })}
-                          placeholder="Describe el formato..."
-                          rows={3}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Tags (separados por comas)
-                        </label>
-                        <input
-                          type="text"
-                          value={captureForm.tags}
-                          onChange={(e) => setCaptureForm({ ...captureForm, tags: e.target.value })}
-                          placeholder="modern, minimalist, professional"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Caso de Uso
-                        </label>
-                        <input
-                          type="text"
-                          value={captureForm.use_case}
-                          onChange={(e) => setCaptureForm({ ...captureForm, use_case: e.target.value })}
-                          placeholder="Ej: Videos promocionales de seguros"
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                    </>
-                  )}
 
                   {capturing && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -555,7 +580,7 @@ export default function FormatsPage() {
                     <button
                       type="button"
                       onClick={() => setShowCaptureModal(false)}
-                      className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
                       disabled={capturing}
                     >
                       Cancelar

@@ -3,17 +3,44 @@
 import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
+interface MenuItem {
+  href: string
+  label: string
+  icon: string
+  roles: string[]  // Roles permitidos para ver este menú
+}
 
 export default function Navbar() {
   const { data: session, status } = useSession()
   const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [userRole, setUserRole] = useState<string>('user')
 
   // No mostrar navbar en páginas de auth
   if (pathname === '/' || pathname === '/login' || pathname === '/register') {
     return null
   }
+
+  // Obtener rol del usuario
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch(`/api/users/me`)
+          if (response.ok) {
+            const data = await response.json()
+            setUserRole(data.user?.role || 'user')
+          }
+        } catch (error) {
+          console.error('Error obteniendo rol:', error)
+          setUserRole('user')
+        }
+      }
+    }
+    fetchUserRole()
+  }, [session])
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
@@ -22,6 +49,23 @@ export default function Navbar() {
   const isActive = (path: string) => {
     return pathname === path ? 'bg-blue-700 text-white' : 'text-gray-300 hover:bg-blue-700 hover:text-white'
   }
+
+  // Definir menús con control de acceso por rol
+  const menuItems: MenuItem[] = [
+    { href: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['admin'] },
+    { href: '/generar-video', label: 'Generar Video', icon: '🎬', roles: ['admin'] },
+    { href: '/generar-contenido', label: 'Generar Contenido', icon: '📝', roles: ['admin'] },
+    { href: '/planificador', label: 'Planificador', icon: '🎯', roles: ['admin', 'user'] },
+    { href: '/formatos', label: 'Formatos', icon: '📹', roles: ['admin', 'user'] },
+    { href: '/company', label: 'Company', icon: '🏢', roles: ['admin', 'user'] },
+    { href: '/admin', label: 'Admin', icon: '🔧', roles: ['admin'] },
+    { href: '/admin/users', label: 'Users', icon: '👥', roles: ['admin'] },
+    { href: '/agendador', label: 'Agendador', icon: '📅', roles: ['admin'] },
+    { href: '/campaigns', label: 'Campaigns', icon: '🎯', roles: ['admin'] }
+  ]
+
+  // Filtrar menús según rol del usuario
+  const visibleMenus = menuItems.filter(item => item.roles.includes(userRole))
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-900 to-purple-900 shadow-lg">
@@ -35,39 +79,17 @@ export default function Navbar() {
               </span>
             </Link>
 
-            {/* Navigation Links - Desktop */}
+            {/* Navigation Links - Desktop (Filtrados por rol) */}
             <div className="hidden md:ml-6 md:flex md:space-x-4">
-              <Link
-                href="/dashboard"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/dashboard')}`}
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/generar-video"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/generar-video')}`}
-              >
-                🎬 Generar Video
-              </Link>
-
-        <Link
-          href="/planificador"
-          className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/planificador')}`}
-        >
-          🎯 Planificador
-        </Link>
-        <Link
-          href="/formatos"
-          className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/formatos')}`}
-        >
-          📹 Formatos
-        </Link>
-              <Link
-                href="/admin"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive('/admin')}`}
-              >
-                🔧 Admin
-              </Link>
+              {visibleMenus.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive(item.href)}`}
+                >
+                  {item.icon} {item.label}
+                </Link>
+              ))}
             </div>
           </div>
 
@@ -129,46 +151,20 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu (Filtrado por rol) */}
         {isMenuOpen && (
           <div className="md:hidden absolute top-16 left-0 right-0 bg-gradient-to-r from-blue-900 to-purple-900 shadow-lg z-40">
             <div className="px-2 pt-2 pb-3 space-y-1 border-t border-blue-700">
-              <Link
-                href="/dashboard"
-                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive('/dashboard')}`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/generar-video"
-                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive('/generar-video')}`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                🎬 Generar Video
-              </Link>
-
-            <Link
-              href="/planificador"
-              className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive('/planificador')}`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              🎯 Planificador
-            </Link>
-            <Link
-              href="/formatos"
-              className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive('/formatos')}`}
-              onClick={() => setIsMenuOpen(false)}
-            >
-              📹 Formatos
-            </Link>
-              <Link
-                href="/admin"
-                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive('/admin')}`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                🔧 Admin
-              </Link>
+              {visibleMenus.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${isActive(item.href)}`}
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {item.icon} {item.label}
+                </Link>
+              ))}
 
               {/* User section - Mobile */}
               <div className="pt-4 pb-3 border-t border-blue-700">

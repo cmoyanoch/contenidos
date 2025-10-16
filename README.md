@@ -19,8 +19,8 @@ For complete documentation, please see: **[PROJECT_DOCUMENTATION.md](./PROJECT_D
 ## 🔗 Services
 
 - **API**: http://localhost:8001
-- **Flower**: http://localhost:5556  
-- **N8N**: http://localhost:5679
+- **Flower**: http://localhost:5556
+- **N8N**: http://localhost:5678
 
 ---
 

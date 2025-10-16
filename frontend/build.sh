@@ -69,7 +69,7 @@ echo "🌐 URLs del proyecto:"
 echo "  Frontend:     http://localhost:3000"
 echo "  API:          http://localhost:8001"
 echo "  pgAdmin:      http://localhost:5050"
-echo "  N8N:          http://localhost:5679"
+echo "  N8N:          http://localhost:5678"
 echo "  Flower:       http://localhost:5556"
 echo ""
 

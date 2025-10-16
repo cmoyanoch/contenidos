@@ -1,13 +1,27 @@
 import VideoHistory from '@/components/video-history';
+import { PrismaClient } from '@/generated/prisma';
 import { getServerSession } from 'next-auth';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+
+const prisma = new PrismaClient()
 
 export default async function DashboardPage() {
   const session = await getServerSession()
 
   if (!session) {
     redirect('/')
+  }
+
+  // Verificar el rol del usuario
+  const user = await prisma.user.findUnique({
+    where: { email: session.user?.email! },
+    select: { role: true }
+  })
+
+  // Si el usuario no es admin, redirigir a planificador
+  if (user?.role !== 'admin') {
+    redirect('/planificador')
   }
 
   return (

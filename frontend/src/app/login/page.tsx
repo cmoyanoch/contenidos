@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import { signIn, getSession } from 'next-auth/react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
+import { getSession, signIn } from 'next-auth/react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 
 function LoginForm() {
   const [email, setEmail] = useState('')
@@ -40,7 +40,27 @@ function LoginForm() {
         // Verificar que la sesión se creó correctamente
         const session = await getSession()
         if (session) {
-          router.push('/dashboard')
+          // Obtener el rol del usuario para redirigir correctamente
+          try {
+            const response = await fetch('/api/users/me')
+            if (response.ok) {
+              const data = await response.json()
+              const userRole = data.user?.role || 'user'
+
+              // Redirigir según el rol
+              if (userRole === 'admin') {
+                router.push('/dashboard')
+              } else {
+                router.push('/planificador')
+              }
+            } else {
+              // Fallback: redirigir a dashboard (será redirigido por el dashboard si no es admin)
+              router.push('/dashboard')
+            }
+          } catch (error) {
+            // Fallback: redirigir a dashboard
+            router.push('/dashboard')
+          }
         }
       }
     } catch (err) {

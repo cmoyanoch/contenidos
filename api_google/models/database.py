@@ -122,6 +122,15 @@ def get_database_session():
     return SessionLocal()
 
 def create_tables():
-    """Crea las tablas en la base de datos"""
+    """Crea las tablas en la base de datos (solo si CREATE_TABLES=true)"""
+    import os
+    create_tables_env = os.getenv("CREATE_TABLES", "false").lower()
+
+    if create_tables_env != "true":
+        print("⚠️  CREATE_TABLES no está configurado como 'true' - omitiendo creación de tablas")
+        print("   Las tablas deben ser creadas manualmente o importadas desde un dump SQL")
+        return
+
+    print("✅ CREATE_TABLES=true - creando tablas automáticamente")
     engine = get_database_engine()
     Base.metadata.create_all(bind=engine)

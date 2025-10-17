@@ -1,20 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Simulación de base de datos en memoria (en producción usar una DB real)
-const webhooks: any[] = []
+const webhooks: Array<{ id: string, [key: string]: unknown }> = []
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession()
     if (!session) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
-
-    const { id } = params
     const index = webhooks.findIndex(w => w.id === id)
 
     if (index === -1) {

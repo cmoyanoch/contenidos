@@ -1,19 +1,43 @@
+import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '../../../../../generated/prisma';
+import { authOptions } from '../../../../../lib/auth-config';
 
 const prisma = new PrismaClient()
 
 // GET - Obtener temática activa para una fecha específica
 export async function GET(request: NextRequest) {
   try {
+    // Obtener sesión del usuario autenticado
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'No autorizado' },
+        { status: 401 }
+      )
+    }
+
+    // Obtener el usuario de la base de datos
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Usuario no encontrado' },
+        { status: 404 }
+      )
+    }
+
+    const userId = user.id
+
     const { searchParams } = new URL(request.url)
     const dateParam = searchParams.get('date')
 
     // Si no se proporciona fecha, usar la fecha actual
     const targetDate = dateParam ? new Date(dateParam) : new Date()
-
-    // TODO: Obtener userId del session/token cuando implementes autenticación
-    const userId = 'cmg1t7jry0004qd01fb6eu3bo' // Usuario cristian moyano
 
     // Buscar temática que esté activa en la fecha especificada
     const activeTheme = await prisma.themePlanning.findFirst({

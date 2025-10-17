@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { PrismaClient } from '@/generated/prisma'
-import fs from 'fs'
-import path from 'path'
+import { PrismaClient } from '@/generated/prisma';
+import fs from 'fs';
+import { getServerSession } from 'next-auth';
+import { NextRequest, NextResponse } from 'next/server';
+import path from 'path';
 
 const prisma = new PrismaClient()
 
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function saveGoogleCredentialsToDB(data: any) {
+async function saveGoogleCredentialsToDB(data: Record<string, unknown>) {
   if (!data.googleApiKey || !data.googleCloudProject) {
     throw new Error('Google API Key and Cloud Project are required')
   }
@@ -91,45 +91,45 @@ async function saveGoogleCredentialsToDB(data: any) {
     await prisma.googleCredentials.update({
       where: { id: existingCredentials.id },
       data: {
-        googleApiKey: data.googleApiKey,
-        googleCloudProject: data.googleCloudProject,
-        googleCloudRegion: data.googleCloudRegion || 'us-central1',
-        googleApplicationCredentials: data.googleApplicationCredentials || null,
-        gcsBucketName: data.gcsBucketName,
-        gcsProjectId: data.gcsProjectId,
-        gcsCredentialsPath: data.gcsCredentialsPath || null,
-        secretKey: data.secretKey,
-        algorithm: data.algorithm || 'HS256',
-        accessTokenExpireMinutes: data.accessTokenExpireMinutes || 30,
-        maxFileSize: data.maxFileSize || 10485760,
-        uploadDir: data.uploadDir || 'uploads',
-        logLevel: data.logLevel || 'INFO',
-        logFile: data.logFile || 'logs/app.log'
+        googleApiKey: data.googleApiKey as string,
+        googleCloudProject: data.googleCloudProject as string,
+        googleCloudRegion: (data.googleCloudRegion as string) || 'us-central1',
+        googleApplicationCredentials: (data.googleApplicationCredentials as string) || null,
+        gcsBucketName: data.gcsBucketName as string,
+        gcsProjectId: data.gcsProjectId as string,
+        gcsCredentialsPath: (data.gcsCredentialsPath as string) || null,
+        secretKey: data.secretKey as string,
+        algorithm: (data.algorithm as string) || 'HS256',
+        accessTokenExpireMinutes: (data.accessTokenExpireMinutes as number) || 30,
+        maxFileSize: (data.maxFileSize as number) || 10485760,
+        uploadDir: (data.uploadDir as string) || 'uploads',
+        logLevel: (data.logLevel as string) || 'INFO',
+        logFile: (data.logFile as string) || 'logs/app.log'
       }
     })
   } else {
     await prisma.googleCredentials.create({
       data: {
-        googleApiKey: data.googleApiKey,
-        googleCloudProject: data.googleCloudProject,
-        googleCloudRegion: data.googleCloudRegion || 'us-central1',
-        googleApplicationCredentials: data.googleApplicationCredentials || null,
-        gcsBucketName: data.gcsBucketName,
-        gcsProjectId: data.gcsProjectId,
-        gcsCredentialsPath: data.gcsCredentialsPath || null,
-        secretKey: data.secretKey,
-        algorithm: data.algorithm || 'HS256',
-        accessTokenExpireMinutes: data.accessTokenExpireMinutes || 30,
-        maxFileSize: data.maxFileSize || 10485760,
-        uploadDir: data.uploadDir || 'uploads',
-        logLevel: data.logLevel || 'INFO',
-        logFile: data.logFile || 'logs/app.log'
+        googleApiKey: data.googleApiKey as string,
+        googleCloudProject: data.googleCloudProject as string,
+        googleCloudRegion: (data.googleCloudRegion as string) || 'us-central1',
+        googleApplicationCredentials: (data.googleApplicationCredentials as string) || null,
+        gcsBucketName: data.gcsBucketName as string,
+        gcsProjectId: data.gcsProjectId as string,
+        gcsCredentialsPath: (data.gcsCredentialsPath as string) || null,
+        secretKey: data.secretKey as string,
+        algorithm: (data.algorithm as string) || 'HS256',
+        accessTokenExpireMinutes: (data.accessTokenExpireMinutes as number) || 30,
+        maxFileSize: (data.maxFileSize as number) || 10485760,
+        uploadDir: (data.uploadDir as string) || 'uploads',
+        logLevel: (data.logLevel as string) || 'INFO',
+        logFile: (data.logFile as string) || 'logs/app.log'
       }
     })
   }
 }
 
-async function updateApiGoogleEnv(credentials: any) {
+async function updateApiGoogleEnv(credentials: Record<string, unknown>) {
   const envPath = path.join(process.cwd(), '..', 'api_google', '.env')
 
   const envContent = `# Google Cloud Configuration

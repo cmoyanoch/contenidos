@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@/generated/prisma'
+import { PrismaClient } from '@/generated/prisma';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Instancia de Prisma para base de datos
 const prisma = new PrismaClient()
@@ -72,11 +72,11 @@ export async function GET(request: NextRequest) {
         operationId: op.operationId,
         prompt: op.prompt,
         status: op.status,
-        progress: op.progress,
+        progress: 0, // No existe en schema, usar valor por defecto
         videoUrl: op.videoUrl,
-        imageUrl: op.imageUrl,
-        errorMessage: op.errorMessage,
-        metadata: op.metadata,
+        imageUrl: null, // No existe en schema
+        errorMessage: op.error, // Usar 'error' en lugar de 'errorMessage'
+        metadata: null, // No existe en schema
         createdAt: op.createdAt,
         updatedAt: op.updatedAt,
         user: op.user

@@ -1,14 +1,37 @@
+import { getServerSession } from 'next-auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '../../../../generated/prisma';
+import { authOptions } from '../../../../lib/auth-config';
 
 const prisma = new PrismaClient()
 
 // GET - Obtener todas las temáticas del usuario
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Obtener userId del session/token cuando implementes autenticación
-    // Por ahora usamos un userId existente para desarrollo
-    const userId = 'cmg1t7jry0004qd01fb6eu3bo' // Usuario cristian moyano
+    // Obtener sesión del usuario autenticado
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'No autorizado' },
+        { status: 401 }
+      )
+    }
+
+    // Obtener el usuario de la base de datos
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Usuario no encontrado' },
+        { status: 404 }
+      )
+    }
+
+    const userId = user.id
 
     const themes = await prisma.themePlanning.findMany({
       where: { userId },
@@ -28,6 +51,31 @@ export async function GET(request: NextRequest) {
 // POST - Crear nueva temática
 export async function POST(request: NextRequest) {
   try {
+    // Obtener sesión del usuario autenticado
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'No autorizado' },
+        { status: 401 }
+      )
+    }
+
+    // Obtener el usuario de la base de datos
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Usuario no encontrado' },
+        { status: 404 }
+      )
+    }
+
+    const userId = user.id
+
     const body = await request.json()
     const { themeName, themeDescription, startDate, endDate } = body
 
@@ -38,9 +86,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    // TODO: Obtener userId del session/token cuando implementes autenticación
-    const userId = 'cmg1t7jry0004qd01fb6eu3bo' // Usuario cristian moyano
 
     // Validar rango de fechas
     const start = new Date(startDate)
@@ -136,6 +181,31 @@ export async function POST(request: NextRequest) {
 // DELETE - Eliminar temática
 export async function DELETE(request: NextRequest) {
   try {
+    // Obtener sesión del usuario autenticado
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'No autorizado' },
+        { status: 401 }
+      )
+    }
+
+    // Obtener el usuario de la base de datos
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true }
+    })
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Usuario no encontrado' },
+        { status: 404 }
+      )
+    }
+
+    const userId = user.id
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -145,9 +215,6 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    // TODO: Obtener userId del session/token cuando implementes autenticación
-    const userId = 'cmg1t7jry0004qd01fb6eu3bo' // Usuario cristian moyano
 
     // Verificar que la temática existe y pertenece al usuario
     const existingTheme = await prisma.themePlanning.findFirst({

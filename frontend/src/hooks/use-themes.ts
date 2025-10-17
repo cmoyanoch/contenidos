@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface ThemePlanning {
   id: string
@@ -106,11 +106,17 @@ export const useThemes = () => {
   const [themes, setThemes] = useState<ThemePlanning[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isMounted, setIsMounted] = useState(false)
+  const [hasInitialized, setHasInitialized] = useState(false)
 
   // Cargar temáticas
-  const fetchThemes = async () => {
+  const fetchThemes = useCallback(async () => {
+    if (!isMounted || hasInitialized) return // ✅ Doble protección contra hidratación
+
     console.log('🔄 useThemes: fetchThemes iniciando...')
     setLoading(true)
+    setHasInitialized(true) // ✅ Marcar como inicializado
+
     try {
       const response = await fetch('/api/planificador/themes')
       console.log('🔄 useThemes: Response status:', response.status)
@@ -125,7 +131,7 @@ export const useThemes = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [isMounted, hasInitialized])
 
   // Crear nueva temática
   const createTheme = async (themeData: CreateThemeData) => {
@@ -244,7 +250,18 @@ export const useThemes = () => {
 
   // Generar eventos diarios para React Big Calendar (eventos de todo el día)
   const generateCalendarEvents = (themes: ThemePlanning[]) => {
-    const events: any[] = []
+    const events: Array<{
+      id: string;
+      title: string;
+      start: Date;
+      end: Date;
+      allDay: boolean;
+      resource: {
+        theme: ThemePlanning;
+        dayContent: ContentDay;
+        dayKey: string;
+      };
+    }> = []
 
     themes.forEach(theme => {
       const startDate = new Date(theme.startDate)
@@ -335,15 +352,28 @@ export const useThemes = () => {
     return distribution
   }
 
+  // Efecto para manejar el montaje del componente
   useEffect(() => {
-    console.log('🔄 useThemes: useEffect ejecutándose...')
-    fetchThemes()
+    // ✅ Delay mínimo para asegurar hidratación completa
+    const timer = setTimeout(() => {
+      setIsMounted(true)
+    }, 150) // ✅ Aumentado a 150ms para mayor estabilidad
+
+    return () => clearTimeout(timer)
   }, [])
+
+  useEffect(() => {
+    if (isMounted && !hasInitialized) {
+      console.log('🔄 useThemes: useEffect ejecutándose...')
+      fetchThemes()
+    }
+  }, [fetchThemes, isMounted, hasInitialized])
 
   return {
     themes,
     loading,
     error,
+    isMounted,
     fetchThemes,
     createTheme,
     updateTheme,

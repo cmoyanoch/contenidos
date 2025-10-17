@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@/generated/prisma'
+import { PrismaClient } from '@/generated/prisma';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Instancia de Prisma para base de datos
 const prisma = new PrismaClient()
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Construir filtros
-    const whereClause: any = {
+    const whereClause: Record<string, unknown> = {
       userId: userId
     }
 

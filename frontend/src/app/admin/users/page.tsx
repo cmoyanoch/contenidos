@@ -114,7 +114,7 @@ export default function UsersAdminPage() {
     try {
       setLoading(true)
 
-      const updateData: any = {
+      const updateData: { email: string; name: string; password?: string; role?: string } = {
         email: formData.email,
         name: formData.name,
         role: formData.role

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -29,11 +29,11 @@ export async function GET(request: NextRequest) {
     console.log(`✅ Datos transformados:`, data)
 
     return NextResponse.json(data)
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('❌ Error en test polling:', error)
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Error checking status from API',
-      details: error.message 
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
 }

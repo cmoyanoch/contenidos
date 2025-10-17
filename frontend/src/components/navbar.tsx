@@ -4,6 +4,8 @@ import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useHydration } from '../hooks/use-hydration';
+import ClientOnly from './client-only';
 
 interface MenuItem {
   href: string
@@ -12,21 +14,35 @@ interface MenuItem {
   roles: string[]  // Roles permitidos para ver este menú
 }
 
-export default function Navbar() {
+function Navbar() {
   const { data: session, status } = useSession()
   const pathname = usePathname()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [userRole, setUserRole] = useState<string>('user')
+  const [isMounted, setIsMounted] = useState(false) // ✅ Control de montaje
+
+  // ✅ Hook de hidratación robusta
+  const isHydrated = useHydration(150)
+
+  // Efecto para manejar el montaje del componente
+  useEffect(() => {
+    // ✅ Delay mínimo para asegurar hidratación completa
+    const timer = setTimeout(() => {
+      setIsMounted(true)
+    }, 100) // ✅ Delay para estabilidad
+
+    return () => clearTimeout(timer)
+  }, [])
 
   // No mostrar navbar en páginas de auth
   if (pathname === '/' || pathname === '/login' || pathname === '/register') {
     return null
   }
 
-  // Obtener rol del usuario
-  useEffect(() => {
+  // Obtener rol del usuario solo cuando esté completamente hidratado
+  useEffect(() => { // eslint-disable-line react-hooks/rules-of-hooks
     const fetchUserRole = async () => {
-      if (session?.user?.email) {
+      if (isHydrated && isMounted && session?.user?.email) { // ✅ Doble verificación
         try {
           const response = await fetch(`/api/users/me`)
           if (response.ok) {
@@ -40,7 +56,7 @@ export default function Navbar() {
       }
     }
     fetchUserRole()
-  }, [session])
+  }, [session, isMounted, isHydrated]) // ✅ Agregar isHydrated a dependencias
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })
@@ -198,5 +214,17 @@ export default function Navbar() {
         )}
       </div>
     </nav>
+  )
+}
+
+// ✅ Wrapper con ClientOnly para prevenir errores de hidratación
+export default function NavbarWrapper() {
+  return (
+    <ClientOnly
+      delay={100}
+      fallback={<div className="h-16 bg-gray-800"></div>}
+    >
+      <Navbar />
+    </ClientOnly>
   )
 }

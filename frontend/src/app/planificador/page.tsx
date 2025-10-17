@@ -8,6 +8,7 @@ import moment from 'moment';
 import React, { useState } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { useHydration } from '../../hooks/use-hydration';
 import { useThemes } from '../../hooks/use-themes';
 
 // Configurar moment en español
@@ -24,12 +25,12 @@ const localizer = momentLocalizer(moment)
 
 export default function PlanificadorPage() {
   const [showModal, setShowModal] = useState(false)
-  const [selectedTheme, setSelectedTheme] = useState<any>(null)
+  const [selectedTheme, setSelectedTheme] = useState<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [syncStatus, setSyncStatus] = useState<string>('')
   const [showWeeklyStrategy, setShowWeeklyStrategy] = useState(false)
   const [showTips, setShowTips] = useState(false)
   const [showContentStatus, setShowContentStatus] = useState(false)
-  const [currentDayContent, setCurrentDayContent] = useState<any>(null)
+  const [currentDayContent, setCurrentDayContent] = useState<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [loadingContent, setLoadingContent] = useState(false)
   const [themeForm, setThemeForm] = useState({
     themeName: '',
@@ -39,14 +40,20 @@ export default function PlanificadorPage() {
   })
   const [showHelpCollapsed, setShowHelpCollapsed] = useState(true) // Inicia colapsado
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [themeToDelete, setThemeToDelete] = useState<any>(null)
+  const [themeToDelete, setThemeToDelete] = useState<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [showEditModal, setShowEditModal] = useState(false)
-  const [themeToEdit, setThemeToEdit] = useState<any>(null)
+  const [themeToEdit, setThemeToEdit] = useState<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [showThemesList, setShowThemesList] = useState(false) // Controla el colapso de la lista de temáticas
   const [isGenerating, setIsGenerating] = useState(false) // Estado de carga para generación de contenido
+
+  // ✅ Hook de hidratación robusta
+  const isHydrated = useHydration(200)
+
   const {
     themes,
     loading,
+    error,
+    isMounted, // ✅ Agregar isMounted
     createTheme,
     deleteTheme,
     validateDateRange,
@@ -76,7 +83,7 @@ export default function PlanificadorPage() {
   }
 
   // Función para confirmar eliminación de temática
-  const handleDeleteTheme = (theme: any) => {
+  const handleDeleteTheme = (theme: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     setThemeToDelete(theme)
     setShowDeleteConfirm(true)
   }
@@ -97,7 +104,7 @@ export default function PlanificadorPage() {
   }
 
   // Función para abrir modal de edición
-  const handleEditTheme = (theme: any) => {
+  const handleEditTheme = (theme: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     setThemeToEdit(theme)
     setThemeForm({
       themeName: theme.themeName,
@@ -121,7 +128,7 @@ export default function PlanificadorPage() {
 
     // Detectar conflictos (excluyendo la temática actual)
     const conflicts = detectConflicts(themeForm.startDate, themeForm.endDate).filter(
-      (t: any) => t.id !== themeToEdit.id
+      (t: any) => t.id !== themeToEdit.id // eslint-disable-line @typescript-eslint/no-explicit-any
     )
     if (conflicts.length > 0) {
       alert(`Ya existe otra temática en ese rango de fechas: "${conflicts[0].themeName}"`)
@@ -291,7 +298,7 @@ export default function PlanificadorPage() {
   }
 
   // Manejar selección de evento (contenido diario)
-  const handleSelectEvent = (event: any) => {
+  const handleSelectEvent = (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     console.log('🎯 handleSelectEvent ejecutándose con:', event)
     console.log('🎯 event.resource:', event.resource)
     console.log('🎯 event.resource.theme:', event.resource?.theme)
@@ -517,7 +524,7 @@ export default function PlanificadorPage() {
   }
 
   // Obtener color del evento según la temática y día de la semana
-  const getEventStyle = (event: any) => {
+  const getEventStyle = (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const dayContent = event.resource?.dayContent
     const theme = event.resource?.theme
     const eventDate = new Date(event.start)
@@ -567,7 +574,7 @@ export default function PlanificadorPage() {
   }
 
   // Componente personalizado para eventos con tooltip
-  const EventComponent = ({ event }: { event: any }) => {
+  const EventComponent = ({ event }: { event: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const dayContent = event.resource?.dayContent
     const theme = event.resource?.theme
 
@@ -609,7 +616,7 @@ export default function PlanificadorPage() {
   }
 
   // Componente personalizado para días con color de temática
-  const CustomDateCell = ({ children, value, events, handleSelectEvent, ...props }: { children: any, value: Date, events: any[], handleSelectEvent: (event: any) => void, [key: string]: any }) => {
+  const CustomDateCell = ({ children, value, events, handleSelectEvent, ...props }: { children: any, value: Date, events: any[], handleSelectEvent: (event: any) => void, [key: string]: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const isWeekendDay = isWeekend(value)
 
     // Buscar si este día tiene eventos y obtener su temática
@@ -719,6 +726,23 @@ export default function PlanificadorPage() {
     console.log('📅 Planificador - Temáticas disponibles:', themes)
   }
 
+  // ✅ Mostrar error si existe
+  if (error) {
+    console.error('❌ Error en planificador:', error)
+  }
+
+  // ✅ Solo renderizar contenido cuando esté completamente hidratado
+  if (!isHydrated || !isMounted) {
+    return (
+      <div className="min-h-screen bg-gray-50 pt-16">
+        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <div className="flex justify-center items-center h-64">
+            <div className="text-gray-500">Inicializando aplicación...</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (loading) {
     return (
@@ -754,7 +778,7 @@ export default function PlanificadorPage() {
             onClick={() => setShowModal(true)}
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             title="Crear nueva temática" >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus w-5 h-5 mr-2"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus w-5 h-5 mr-2"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
               Nueva Temática
            </button>
 
@@ -793,7 +817,7 @@ export default function PlanificadorPage() {
             {showThemesList && themes.length > 0 && (
               <div className="px-2 pb-3 space-y-2 max-h-[500px] overflow-y-auto">
                 {themes.map((theme) => {
-                  const themeEvents = events.filter((e: any) => e.resource?.theme?.id === theme.id)
+                  const themeEvents = events.filter((e: any) => e.resource?.theme?.id === theme.id) // eslint-disable-line @typescript-eslint/no-explicit-any
 
                   return (
                     <div
@@ -1072,7 +1096,7 @@ export default function PlanificadorPage() {
           defaultView="month"
           components={{
             event: EventComponent,
-            dateCellWrapper: (props: any) => (
+            dateCellWrapper: (props: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
               <CustomDateCell
                 {...props}
                 events={events}
@@ -1098,7 +1122,7 @@ export default function PlanificadorPage() {
             time: 'Hora',
             event: 'Evento',
             noEventsInRange: 'No hay eventos en este rango',
-            showMore: (total: any) => `+ Ver más (${total})`
+            showMore: (total: any) => `+ Ver más (${total})`   // eslint-disable-line @typescript-eslint/no-explicit-any
           }}
         />
         </div>

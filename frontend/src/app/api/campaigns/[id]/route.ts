@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@/generated/prisma'
+import { PrismaClient } from '@/generated/prisma';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Instancia de Prisma para base de datos
 const prisma = new PrismaClient()
@@ -7,10 +7,10 @@ const prisma = new PrismaClient()
 // GET - Obtener campaña específica con detalles completos
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const campaignId = params.id
+    const { id: campaignId } = await params
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
 
@@ -94,10 +94,10 @@ export async function GET(
 // PUT - Actualizar campaña
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const campaignId = params.id
+    const { id: campaignId } = await params
     const body = await request.json()
     const {
       name,
@@ -158,7 +158,7 @@ export async function PUT(
     }
 
     // Preparar datos para actualización
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
 
     if (name !== undefined) updateData.name = name
     if (description !== undefined) updateData.description = description
@@ -220,10 +220,10 @@ export async function PUT(
 // DELETE - Eliminar campaña
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const campaignId = params.id
+    const { id: campaignId } = await params
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
 

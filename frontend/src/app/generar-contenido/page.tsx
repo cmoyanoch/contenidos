@@ -307,12 +307,12 @@ export default function GenerarContenidoPage() {
                         <div>
                           <span className="text-gray-500">Aspecto:</span> {format.aspect_ratio}
                         </div>
-                        {contentType === 'video' && (
+                        {contentType === 'video' && 'recommended_veo_model' in format && (
                           <div>
                             <span className="text-gray-500">Modelo:</span> {format.recommended_veo_model}
                           </div>
                         )}
-                        {contentType === 'image' && (
+                        {contentType === 'image' && 'recommended_ai_model' in format && (
                           <div>
                             <span className="text-gray-500">Modelo:</span> {format.recommended_ai_model}
                           </div>

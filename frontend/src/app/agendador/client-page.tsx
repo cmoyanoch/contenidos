@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 // Lazy loading de componentes pesados
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let CalendarView: any = null
 let fullCalendarLoaded = false
 
@@ -76,7 +77,7 @@ export default function AgendadorClientPage() {
 
     if (view === 'calendar' && !fullCalendarLoaded) {
       import('@/components/agendador/basic-calendar').then((module) => {
-        CalendarView = module.default
+        CalendarView = module.default as React.ComponentType<unknown>
         fullCalendarLoaded = true
         setCalendarReady(true)
       })
@@ -172,7 +173,7 @@ export default function AgendadorClientPage() {
     setShowModal(true)
   }
 
-  const handleEventClick = (event: any) => {
+  const handleEventClick = (event: { id: string }) => {
     const content = scheduledContent.find(c => c.id === event.id)
     if (content) {
       setSelectedEvent(content)
@@ -186,7 +187,7 @@ export default function AgendadorClientPage() {
     }
   }
 
-  const handleEventDrop = (info: any) => {
+  const handleEventDrop = (info: { event: { id: string; startStr: string; start: Date } }) => {
     const updatedContent = scheduledContent.map(content => {
       if (content.id === info.event.id) {
         const newDate = info.event.start.toISOString().split('T')[0]

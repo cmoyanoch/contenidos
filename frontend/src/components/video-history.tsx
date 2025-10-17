@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useSession } from 'next-auth/react'
-import { apiClient, VideoOperation } from '@/lib/api-client'
+import { VideoOperation } from '@/lib/api-client';
+import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 
 export default function VideoHistory() {
   const { data: session } = useSession()
@@ -14,13 +14,21 @@ export default function VideoHistory() {
     if (session?.user?.id) {
       loadVideos()
     }
-  }, [session])
+  }, [session?.user?.id])
 
   const loadVideos = async () => {
+    if (!session?.user?.id) return
+
     try {
       setLoading(true)
-      const userVideos = await apiClient.getUserVideos(session?.user?.id!)
-      setVideos(userVideos)
+      setError(null)
+      // Obtener videos desde la API local del frontend
+      const response = await fetch(`/api/video-history?userId=${session.user.id}`)
+      if (!response.ok) {
+        throw new Error('Error obteniendo historial de videos')
+      }
+      const result = await response.json()
+      setVideos(result.data || [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error cargando videos')
     } finally {
@@ -82,7 +90,7 @@ export default function VideoHistory() {
               {getStatusText(video.status)}
             </span>
           </div>
-          
+
           <p className="text-sm text-gray-500 mb-3">
             Creado: {new Date(video.created_at).toLocaleString()}
           </p>

@@ -11,7 +11,7 @@ export default function SimpleAgendadorPage() {
   const [contentType, setContentType] = useState<'video' | 'image' | 'post'>('post')
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(['instagram'])
   const [showModal, setShowModal] = useState<boolean>(false)
-  const [selectedEvent, setSelectedEvent] = useState<any>(null)
+  const [selectedEvent, setSelectedEvent] = useState<{ id: string; title: string; description: string; date: string; time: string; type: string; platform: string[]; status: string } | null>(null)
 
   const [scheduledContent, setScheduledContent] = useState([
     {
@@ -601,7 +601,7 @@ export default function SimpleAgendadorPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Plataformas</p>
                   <div className="flex gap-2">
-                    {selectedEvent.platform.map((p) => {
+                    {selectedEvent.platform.map((p: string) => {
                       const platform = platforms.find(pl => pl.id === p)
                       return (
                         <span

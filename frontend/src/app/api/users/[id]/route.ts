@@ -8,9 +8,10 @@ const prisma = new PrismaClient()
 // GET - Obtener usuario por ID
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession()
 
     if (!session || !session.user) {
@@ -32,7 +33,7 @@ export async function GET(
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         email: true,
@@ -79,9 +80,10 @@ export async function GET(
 // PUT - Actualizar usuario
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession()
 
     if (!session || !session.user) {
@@ -104,7 +106,7 @@ export async function PUT(
 
     // Verificar que el usuario a editar existe
     const userToEdit = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!userToEdit) {
@@ -177,7 +179,7 @@ export async function PUT(
 
     // Actualizar usuario
     const updatedUser = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,
@@ -207,9 +209,10 @@ export async function PUT(
 // DELETE - Eliminar usuario
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const session = await getServerSession()
 
     if (!session || !session.user) {
@@ -232,7 +235,7 @@ export async function DELETE(
 
     // Verificar que el usuario existe
     const userToDelete = await prisma.user.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!userToDelete) {
@@ -266,7 +269,7 @@ export async function DELETE(
 
     // Eliminar usuario (cascade eliminará relaciones)
     await prisma.user.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({

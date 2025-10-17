@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { PrismaClient } from '@/generated/prisma'
-import fs from 'fs'
-import path from 'path'
+import { PrismaClient } from '@/generated/prisma';
+import fs from 'fs';
+import { getServerSession } from 'next-auth';
+import { NextRequest, NextResponse } from 'next/server';
+import path from 'path';
 
 const prisma = new PrismaClient()
 
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function saveCredentialsToDB(platform: string, data: any) {
+async function saveCredentialsToDB(platform: string, data: Record<string, unknown>) {
   if (!data.accessToken) return
 
   await prisma.socialCredentials.upsert({
@@ -99,35 +99,35 @@ async function saveCredentialsToDB(platform: string, data: any) {
     },
     create: {
       platform,
-      accessToken: data.accessToken,
-      accountId: data.accountId || null,
-      pageId: data.pageId || null,
-      personId: data.personId || null,
-      phoneNumberId: data.phoneNumberId || null,
-      businessAccountId: data.businessAccountId || null
+      accessToken: data.accessToken as string,
+      accountId: data.accountId as string | null,
+      pageId: data.pageId as string | null,
+      personId: data.personId as string | null,
+      phoneNumberId: data.phoneNumberId as string | null,
+      businessAccountId: data.businessAccountId as string | null
     }
   })
 }
 
-async function updateApiRrssEnv(credentials: any) {
+async function updateApiRrssEnv(credentials: Record<string, unknown>) {
   const envPath = path.join(process.cwd(), '..', 'api_rrss', '.env')
 
   const envContent = `# Instagram Graph API
-INSTAGRAM_ACCESS_TOKEN=${credentials.instagram.accessToken}
-INSTAGRAM_ACCOUNT_ID=${credentials.instagram.accountId}
+INSTAGRAM_ACCESS_TOKEN=${(credentials as Record<string, unknown> & { instagram: { accessToken: string; accountId: string | null } }).instagram?.accessToken as string}
+INSTAGRAM_ACCOUNT_ID=${(credentials as Record<string, unknown> & { instagram: { accountId: string | null } }).instagram?.accountId as string | null}
 
 # Facebook Graph API
-FACEBOOK_ACCESS_TOKEN=${credentials.facebook.accessToken}
-FACEBOOK_PAGE_ID=${credentials.facebook.pageId}
+FACEBOOK_ACCESS_TOKEN=${(credentials as Record<string, unknown> & { facebook: { accessToken: string; pageId: string } }).facebook?.accessToken as string}
+FACEBOOK_PAGE_ID=${(credentials as Record<string, unknown> & { facebook: { pageId: string } }).facebook?.pageId as string}
 
 # LinkedIn API
-LINKEDIN_ACCESS_TOKEN=${credentials.linkedin.accessToken}
-LINKEDIN_PERSON_ID=${credentials.linkedin.personId}
+LINKEDIN_ACCESS_TOKEN=${(credentials as Record<string, unknown> & { linkedin: { accessToken: string; personId: string } }).linkedin?.accessToken as string}
+LINKEDIN_PERSON_ID=${(credentials as Record<string, unknown> & { linkedin: { personId: string } }).linkedin?.personId as string}
 
 # WhatsApp Business Cloud API
-WHATSAPP_ACCESS_TOKEN=${credentials.whatsapp.accessToken}
-WHATSAPP_PHONE_NUMBER_ID=${credentials.whatsapp.phoneNumberId}
-WHATSAPP_BUSINESS_ACCOUNT_ID=${credentials.whatsapp.businessAccountId}
+WHATSAPP_ACCESS_TOKEN=${(credentials as Record<string, unknown> & { whatsapp: { accessToken: string; phoneNumberId: string; businessAccountId: string } }).whatsapp?.accessToken as string}
+WHATSAPP_PHONE_NUMBER_ID=${(credentials as Record<string, unknown> & { whatsapp: { phoneNumberId: string } }).whatsapp?.phoneNumberId as string}
+WHATSAPP_BUSINESS_ACCOUNT_ID=${(credentials as Record<string, unknown> & { whatsapp: { businessAccountId: string } }).whatsapp?.businessAccountId as string}
 `
 
   try {

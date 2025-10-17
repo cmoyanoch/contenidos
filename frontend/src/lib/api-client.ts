@@ -1,5 +1,5 @@
 // Cliente para interactuar con la API de Veo 3.0
-const API_BASE_URL = process.env.API_BASE_URL || 'http://api:8000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'
 
 export interface VideoGenerationRequest {
   prompt: string
@@ -76,7 +76,7 @@ class ApiClient {
   // Enviar webhook a N8N
   async sendWebhookToN8N(data: any): Promise<void> {
     const webhookUrl = process.env.N8N_WEBHOOK_URL || 'http://n8n:5678'
-    
+
     const response = await fetch(`${webhookUrl}/webhook/video-completed`, {
       method: 'POST',
       headers: {

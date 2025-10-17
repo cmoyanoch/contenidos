@@ -1,4 +1,5 @@
 import { PrismaClient } from '@/generated/prisma';
+import { authOptions } from '@/lib/auth-config'; // ✅ Importar authOptions
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
 
@@ -7,7 +8,7 @@ const prisma = new PrismaClient()
 // GET - Obtener información del usuario actual
 export async function GET() {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions) // ✅ Usar authOptions
 
     if (!session || !session.user || !session.user.email) {
       return NextResponse.json(

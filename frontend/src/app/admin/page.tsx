@@ -4,6 +4,17 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+// ✅ Interface para Webhooks
+interface Webhook {
+  id?: string;
+  name: string;
+  url: string;
+  active?: boolean;
+  method?: string;
+  description?: string;
+  last_executed?: string;
+}
+
 export default function AdminPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -52,12 +63,12 @@ export default function AdminPage() {
     logFile: 'logs/app.log'
   })
   const [showWebhooks, setShowWebhooks] = useState(false)
-  const [webhooks, setWebhooks] = useState([])
-  const [newWebhook, setNewWebhook] = useState({
+  const [webhooks, setWebhooks] = useState<Webhook[]>([])
+  const [newWebhook, setNewWebhook] = useState<Webhook>({
     name: 'Generar Video',
     url: ''
   })
-  const [editingWebhook, setEditingWebhook] = useState(null)
+  const [editingWebhook, setEditingWebhook] = useState<Webhook | null>(null)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -137,7 +148,7 @@ export default function AdminPage() {
     }
   }
 
-  const saveWebhook = async (webhook) => {
+  const saveWebhook = async (webhook: Webhook) => {
     setLoading(true)
     try {
       const response = await fetch('/api/webhooks', {
@@ -162,7 +173,7 @@ export default function AdminPage() {
     }
   }
 
-  const deleteWebhook = async (id) => {
+  const deleteWebhook = async (id: string) => {
     if (!confirm('¿Estás seguro de eliminar este webhook?')) return
 
     try {
@@ -177,7 +188,7 @@ export default function AdminPage() {
     setTimeout(() => setMessage(''), 3000)
   }
 
-  const testWebhook = async (webhook) => {
+  const testWebhook = async (webhook: Webhook) => {
     setLoading(true)
     try {
       const response = await fetch('/api/webhooks/test', {
@@ -553,9 +564,10 @@ export default function AdminPage() {
                           ✏️
                         </button>
                         <button
-                          onClick={() => deleteWebhook(webhook.id)}
+                          onClick={() => webhook.id && deleteWebhook(webhook.id)}
                           className="text-red-400 hover:text-red-300 transition-colors"
                           title="Eliminar"
+                          disabled={!webhook.id}
                         >
                           🗑️
                         </button>

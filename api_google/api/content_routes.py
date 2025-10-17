@@ -416,3 +416,217 @@ async def get_content_stats():
     except Exception as e:
         logger.error(f"❌ Error obteniendo estadísticas de contenidos: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@content_router.get("/formats/by-content-type/{content_type}")
+async def get_formats_by_content_type(content_type: str):
+    """
+    Obtiene formatos de video e imagen según content_type usando la función SQL.
+
+    **Parámetros válidos:**
+    - `image_stats` - Imagen con estadísticas/infografías
+    - `video_person` - Video con persona real hablando
+    - `cta_post` - Post con llamado a la acción
+    - `video_avatar` - Video con avatar animado
+    - `manual` - Elige ALEATORIAMENTE entre los 4 tipos anteriores
+
+    **Ejemplo:**
+    ```
+    GET /api/v1/content/formats/by-content-type/image_stats
+    ```
+
+    **Respuesta:**
+    ```json
+    {
+      "success": true,
+      "content_type": "image_stats",
+      "total": 2,
+      "formats": [
+        {
+          "format_type": "image",
+          "id": 1,
+          "format_name": "Stats Infographic",
+          "recommended_model": "dall-e-3",
+          "aspect_ratio": "16:9",
+          "usage_count": 25,
+          "success_rate": 95.5
+        }
+      ]
+    }
+    ```
+    """
+    try:
+        logger.info(f"🔍 Buscando formatos para content_type: {content_type}")
+
+        db_session = get_database_session()
+        try:
+            # Llamada a la función SQL get_formats_by_content_type
+            query = text("""
+                SELECT * FROM get_formats_by_content_type(:content_type)
+            """)
+
+            result = db_session.execute(query, {"content_type": content_type})
+            rows = result.fetchall()
+
+            # Convertir a lista de diccionarios
+            formats = []
+            selected_type = None
+
+            for row in rows:
+                format_data = dict(row._mapping)
+
+                # Capturar el tipo seleccionado (para 'manual')
+                if selected_type is None and 'selected_type' in format_data:
+                    selected_type = format_data['selected_type']
+
+                # Remover selected_type de cada formato individual
+                if 'selected_type' in format_data:
+                    del format_data['selected_type']
+
+                # Convertir timestamps a ISO format
+                if format_data.get('created_at'):
+                    format_data['created_at'] = format_data['created_at'].isoformat()
+                if format_data.get('updated_at'):
+                    format_data['updated_at'] = format_data['updated_at'].isoformat()
+
+                formats.append(format_data)
+
+            # Log mejorado para 'manual'
+            if content_type == 'manual' and selected_type:
+                logger.info(f"✅ 'manual' seleccionó aleatoriamente '{selected_type}' - Encontrados {len(formats)} formatos")
+            else:
+                logger.info(f"✅ Encontrados {len(formats)} formatos para '{content_type}'")
+
+            response = {
+                "success": True,
+                "content_type": content_type,
+                "total": len(formats),
+                "formats": formats
+            }
+
+            # Agregar selected_type si es 'manual'
+            if content_type == 'manual' and selected_type:
+                response["selected_type"] = selected_type
+
+            return response
+
+        finally:
+            db_session.close()
+
+    except Exception as e:
+        logger.error(f"❌ Error obteniendo formatos por content_type: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@content_router.get("/themes/by-date")
+async def get_theme_by_date(
+    date: Optional[str] = None,
+    user_id: Optional[str] = None
+):
+    """
+    Obtiene la temática activa para una fecha específica.
+
+    **Endpoint SIN autenticación para uso en N8N.**
+
+    **Parámetros:**
+    - `date` (opcional): Fecha en formato YYYY-MM-DD (default: hoy)
+    - `user_id` (opcional): ID del usuario (si no se proporciona, busca en todos)
+
+    **Ejemplo:**
+    ```
+    GET /api/v1/content/themes/by-date?date=2025-10-17
+    GET /api/v1/content/themes/by-date?date=2025-10-17&user_id=abc123
+    ```
+
+    **Respuesta:**
+    ```json
+    {
+      "success": true,
+      "date": "2025-10-17",
+      "theme": {
+        "id": "abc123",
+        "themeName": "Seguros de Hogar",
+        "themeDescription": "...",
+        "startDate": "2025-10-15",
+        "endDate": "2025-10-22",
+        "userId": "xyz789"
+      }
+    }
+    ```
+    """
+    try:
+        from datetime import datetime
+
+        # Si no se proporciona fecha, usar hoy
+        target_date = datetime.strptime(date, "%Y-%m-%d").date() if date else datetime.now().date()
+
+        logger.info(f"🔍 Buscando temática activa para fecha: {target_date}")
+
+        db_session = get_database_session()
+        try:
+            # Construir query base (columnas en snake_case)
+            query = """
+                SELECT
+                    id, theme_name, theme_description,
+                    start_date, end_date, user_id,
+                    created_at, updated_at
+                FROM theme_planning
+                WHERE start_date <= :target_date
+                  AND end_date >= :target_date
+            """
+
+            params = {"target_date": target_date}
+
+            # Filtrar por usuario si se proporciona
+            if user_id:
+                query += " AND user_id = :user_id"
+                params["user_id"] = user_id
+
+            # Ordenar por fecha más reciente
+            query += " ORDER BY start_date DESC LIMIT 1"
+
+            result = db_session.execute(text(query), params)
+            row = result.fetchone()
+
+            if not row:
+                logger.info(f"⚠️ No hay temática activa para {target_date}")
+                return {
+                    "success": True,
+                    "message": "No hay temática activa para la fecha especificada",
+                    "date": str(target_date),
+                    "theme": None
+                }
+
+            # Convertir a diccionario (mantener camelCase para consistencia con frontend)
+            theme_data = {
+                "id": row.id,
+                "themeName": row.theme_name,
+                "themeDescription": row.theme_description,
+                "startDate": row.start_date.isoformat() if row.start_date else None,
+                "endDate": row.end_date.isoformat() if row.end_date else None,
+                "userId": row.user_id,
+                "createdAt": row.created_at.isoformat() if row.created_at else None,
+                "updatedAt": row.updated_at.isoformat() if row.updated_at else None
+            }
+
+            logger.info(f"✅ Temática encontrada: {theme_data['themeName']} (ID: {theme_data['id']})")
+
+            return {
+                "success": True,
+                "message": "Temática activa encontrada",
+                "date": str(target_date),
+                "theme": theme_data
+            }
+
+        finally:
+            db_session.close()
+
+    except ValueError as e:
+        logger.error(f"❌ Formato de fecha inválido: {e}")
+        raise HTTPException(
+            status_code=400,
+            detail="Formato de fecha inválido. Use YYYY-MM-DD"
+        )
+    except Exception as e:
+        logger.error(f"❌ Error obteniendo temática por fecha: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

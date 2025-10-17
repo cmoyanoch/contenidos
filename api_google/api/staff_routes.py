@@ -59,6 +59,79 @@ async def list_all_staff(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error listing staff: {str(e)}")
 
+@router.get("/random-simple", response_model=dict)
+async def get_random_staff_simple(db: Session = Depends(get_db)):
+    """
+    Obtiene un empleado del staff de forma ALEATORIA.
+
+    **Endpoint SIN autenticación para uso en N8N.**
+
+    **Ejemplo:**
+    ```
+    GET /api/v1/staff/random-simple
+    ```
+
+    **Respuesta:**
+    ```json
+    {
+      "success": true,
+      "employee": {
+        "id": 20,
+        "name": "Marcia da Silva",
+        "position": "Agent",
+        "original_image_url": "original/86229.png",
+        "image_url_1": "avatar/generated_image_1760643996054.png",
+        "image_url_2": null,
+        "is_active": true,
+        "created_at": "2025-10-15T07:15:43.996000"
+      }
+    }
+    ```
+    """
+    try:
+        # Obtener empleado aleatorio
+        employee = db.execute(text("""
+            SELECT
+                se.id,
+                se.name,
+                se.position,
+                se.original_image_url,
+                se.image_url_1,
+                se.image_url_2,
+                se.is_active,
+                se.created_at,
+                se.updated_at
+            FROM api_google.staff_employee se
+            WHERE se.is_active = true
+            ORDER BY RANDOM()
+            LIMIT 1
+        """)).fetchone()
+
+        if not employee:
+            return {
+                "success": False,
+                "message": "No hay empleados activos",
+                "employee": None
+            }
+
+        return {
+            "success": True,
+            "employee": {
+                "id": employee.id,
+                "name": employee.name,
+                "position": employee.position,
+                "original_image_url": employee.original_image_url,
+                "image_url_1": employee.image_url_1,
+                "image_url_2": employee.image_url_2,
+                "is_active": employee.is_active,
+                "created_at": employee.created_at.isoformat() if employee.created_at else None,
+                "updated_at": employee.updated_at.isoformat() if employee.updated_at else None
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo empleado aleatorio: {str(e)}")
+
+
 @router.get("/random", response_model=dict)
 async def get_random_staff(
     content_type: str = None,

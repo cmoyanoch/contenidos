@@ -2,6 +2,7 @@
 
 import { AlertCircle, CheckCircle2, FileText, Image as ImageIcon, Play, RefreshCw, Video } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { buildApiUrl } from '../../lib/config';
 
 interface VideoFormat {
   id: number
@@ -47,13 +48,13 @@ export default function GenerarContenidoPage() {
     setLoadingFormats(true)
     try {
       if (type === 'video') {
-        const response = await fetch('http://localhost:8001/api/v1/formats/')
+        const response = await fetch(buildApiUrl('/api/v1/formats/'))
         const data = await response.json()
         if (data.success) {
           setVideoFormats(data.formats)
         }
       } else if (type === 'image') {
-        const response = await fetch('http://localhost:8001/api/v1/image-formats/')
+        const response = await fetch(buildApiUrl('/api/v1/image-formats/'))
         const data = await response.json()
         if (data.success) {
           setImageFormats(data.formats)
@@ -108,7 +109,7 @@ export default function GenerarContenidoPage() {
       }
 
       // Llamar al endpoint de creación de contenido
-      const response = await fetch('http://localhost:8001/api/v1/content/', {
+      const response = await fetch(buildApiUrl('/api/v1/content/'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

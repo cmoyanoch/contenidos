@@ -13,31 +13,37 @@ class Settings(BaseSettings):
 
     # Database
     DATABASE_URL: str = "postgresql://postgres:password@localhost:5433/frontend_db"
-    
+
     # Redis
     REDIS_URL: str = "redis://localhost:6380/0"
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
-    
+
     # API Configuration
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000
     DEBUG: bool = True
-    
+
     # Security
     SECRET_KEY: str = "your-secret-key-here"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
+
     # File Upload
     MAX_FILE_SIZE: int = 10485760  # 10MB
     UPLOAD_DIR: str = "uploads"
-    
+
     # Logging
     LOG_LEVEL: str = "INFO"
     LOG_FILE: str = "logs/app.log"
-    
+
+    # CORS Configuration
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3010,http://127.0.0.1:3000,http://127.0.0.1:3010"
+    CORS_ALLOW_CREDENTIALS: bool = True
+    CORS_ALLOW_METHODS: str = "GET,POST,PATCH,DELETE,PUT"
+    CORS_ALLOW_HEADERS: str = "*"
+
     model_config = {
         "env_file": ".env",
         "case_sensitive": True,

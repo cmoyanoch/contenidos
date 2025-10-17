@@ -1,9 +1,7 @@
-// Schema de Prisma para Veo 3.0 Frontend
-// Conecta con la base de datos PostgreSQL existente
-
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -11,49 +9,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Modelo de Usuario para el frontend
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  password  String   // Contraseña hasheada
-  role      String   @default("user") // 'admin' o 'user'
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relaciones
-  videoOperations VideoOperation[]
-  sessions        Session[]
+  id              String           @id @default(cuid())
+  email           String           @unique
+  name            String?
+  password        String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  role            String?          @default("user") @db.VarChar(20)
   accounts        Account[]
   campaigns       Campaign[]
-  themePlanning   ThemePlanning[] // 🆕 NUEVO: Planificador de temáticas
+  sessions        Session[]
+  themePlanning   ThemePlanning[]
+  videoOperations VideoOperation[]
 
   @@map("users")
 }
 
-// Modelo de Operaciones de Video
 model VideoOperation {
-  id          String   @id @default(cuid())
-  operationId String?  @unique // ID único para operaciones de N8N
-  userId      String?  // ✅ Ahora es opcional para webhooks sin usuario
-  prompt      String
-  status      String   @default("pending") // pending, processing, completed, failed
-  videoUrl    String?
-  error       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relación opcional con campaña
-  campaignId String? @map("campaignid")
-  campaign   Campaign? @relation("CampaignVideos", fields: [campaignId], references: [id], onDelete: SetNull)
-
-  // Relaciones
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)  // ✅ Relación también opcional
+  id                String              @id @default(cuid())
+  userId            String?
+  prompt            String
+  status            String              @default("pending")
+  videoUrl          String?
+  error             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  campaignId        String?             @map("campaignid")
+  operationId       String?             @unique
+  content_generated content_generated[]
+  campaign          Campaign?           @relation("CampaignVideos", fields: [campaignId], references: [id])
+  user              User?               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("video_operations")
 }
 
-// Modelo de Sesiones (para NextAuth)
 model Session {
   id           String   @id @default(cuid())
   sessionToken String   @unique
@@ -64,28 +54,25 @@ model Session {
   @@map("sessions")
 }
 
-// Modelo de Cuentas (para NextAuth)
 model Account {
   id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
 }
 
-// Modelo de Verificación (para NextAuth)
 model VerificationToken {
   identifier String
   token      String   @unique
@@ -95,131 +82,299 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
-// Modelo de Credenciales de Redes Sociales
 model SocialCredentials {
-  id        String   @id @default(cuid())
-  platform  String   // instagram, facebook, linkedin, whatsapp
-
-  // Campos comunes
-  accessToken String
-
-  // Instagram
-  accountId String?
-
-  // Facebook
-  pageId String?
-
-  // LinkedIn
-  personId String?
-
-  // WhatsApp
-  phoneNumberId String?
+  id                String   @id @default(cuid())
+  platform          String   @unique
+  accessToken       String
+  accountId         String?
+  pageId            String?
+  personId          String?
+  phoneNumberId     String?
   businessAccountId String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([platform])
   @@map("social_credentials")
 }
 
-// Modelo de Credenciales de Google API
 model GoogleCredentials {
-  id        String   @id @default(cuid())
-
-  // Google Cloud Configuration
-  googleApiKey String
-  googleCloudProject String
-  googleCloudRegion String
-  googleApplicationCredentials String? @db.Text
-
-  // Google Cloud Storage
-  gcsBucketName String
-  gcsProjectId String
-  gcsCredentialsPath String?
-
-  // Security
-  secretKey String
-  algorithm String @default("HS256")
-  accessTokenExpireMinutes Int @default(30)
-
-  // File Upload
-  maxFileSize Int @default(10485760)
-  uploadDir String @default("uploads")
-
-  // Logging
-  logLevel String @default("INFO")
-  logFile String @default("logs/app.log")
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                           String   @id @default(cuid())
+  googleApiKey                 String
+  googleCloudProject           String
+  googleCloudRegion            String
+  googleApplicationCredentials String?
+  gcsBucketName                String
+  gcsProjectId                 String
+  gcsCredentialsPath           String?
+  secretKey                    String
+  algorithm                    String   @default("HS256")
+  accessTokenExpireMinutes     Int      @default(30)
+  maxFileSize                  Int      @default(10485760)
+  uploadDir                    String   @default("uploads")
+  logLevel                     String   @default("INFO")
+  logFile                      String   @default("logs/app.log")
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
 
   @@map("google_credentials")
 }
 
-// Modelo de Campaña para contenido automatizado
 model Campaign {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-
-  // Configuración de campaña
-  status      String   @default("draft") // draft, active, paused, completed, archived
-  type        String   // ugc_video, social_media, continuous_content
-
-  // Configuración de contenido
-  targetPlatforms String[] @map("targetplatforms") // ["instagram", "tiktok", "youtube", "facebook"]
-  aspectRatio     String   @default("9:16") @map("aspectratio") // 16:9, 9:16, 1:1
-  duration        Int      @default(8) // Duración en segundos
-
-  // Configuración de generación
-  promptTemplate  String?  @map("prompttemplate") // Template base para prompts
-  characterStyle  String?  @map("characterstyle") // Estilo de personaje consistente
-  brandGuidelines String?  @map("brandguidelines") // Guidelines de marca
-
-  // Programación
-  scheduledStart  DateTime? @map("scheduledstart")
-  scheduledEnd    DateTime? @map("scheduledend")
-  frequency       String?   // daily, weekly, hourly
-  totalVideos     Int       @default(1) @map("totalvideos")
-
-  // Metadata
-  tags            String[]  // Tags para organización
-  priority        Int       @default(5) // 1-10 prioridad
-
-  // Relaciones
-  userId          String    @map("userid")
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Timestamps
-  createdAt       DateTime  @default(now()) @map("createdat")
-  updatedAt       DateTime  @updatedAt @map("updatedat")
-
-  // Relaciones con videos generados
+  id              String           @id @default(cuid())
+  name            String
+  description     String?
+  status          String           @default("draft")
+  type            String
+  targetPlatforms String[]         @map("targetplatforms")
+  aspectRatio     String           @default("9:16") @map("aspectratio")
+  duration        Int              @default(8)
+  promptTemplate  String?          @map("prompttemplate")
+  characterStyle  String?          @map("characterstyle")
+  brandGuidelines String?          @map("brandguidelines")
+  scheduledStart  DateTime?        @map("scheduledstart")
+  scheduledEnd    DateTime?        @map("scheduledend")
+  frequency       String?
+  totalVideos     Int              @default(1) @map("totalvideos")
+  tags            String[]
+  priority        Int              @default(5)
+  userId          String           @map("userid")
+  createdAt       DateTime         @default(now()) @map("createdat")
+  updatedAt       DateTime         @updatedAt @map("updatedat")
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   videoOperations VideoOperation[] @relation("CampaignVideos")
 
   @@map("campaigns")
 }
 
-// ============================================================================
-// 🆕 NUEVO: MÓDULO DE PLANIFICACIÓN DE TEMÁTICAS
-// ============================================================================
-
 model ThemePlanning {
-  id                String    @id @default(cuid())
-  userId            String    @map("user_id")
-  themeName         String    @map("theme_name")
-  themeDescription  String?   @map("theme_description")
-  startDate         DateTime  @map("start_date") @db.Date
-  endDate           DateTime  @map("end_date") @db.Date
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  id                String              @id @default(dbgenerated("(gen_random_uuid())::text"))
+  userId            String              @map("user_id")
+  themeName         String              @map("theme_name")
+  themeDescription  String?             @map("theme_description")
+  startDate         DateTime            @map("start_date") @db.Date
+  endDate           DateTime            @map("end_date") @db.Date
+  createdAt         DateTime?           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime?           @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  content_generated content_generated[]
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  // Relaciones
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  @@index([startDate, endDate], map: "idx_theme_planning_dates")
+  @@index([themeName], map: "idx_theme_planning_theme_name")
+  @@index([userId], map: "idx_theme_planning_user_id")
   @@map("theme_planning")
-  @@index([userId])
-  @@index([startDate, endDate])
-  @@index([themeName])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model company_branding {
+  id                Int       @id @default(autoincrement())
+  company_name      String    @db.VarChar(255)
+  slogan            String?
+  industry          String?   @db.VarChar(100)
+  logo_url          String?
+  primary_color     String?   @db.VarChar(7)
+  secondary_color   String?   @db.VarChar(7)
+  accent_color      String?   @db.VarChar(7)
+  font_family       String?   @db.VarChar(100)
+  brand_style       String?   @db.VarChar(50)
+  phone_number      String?   @db.VarChar(20)
+  email             String?   @db.VarChar(255)
+  website           String?   @db.VarChar(255)
+  address           String?
+  city              String?   @db.VarChar(100)
+  state             String?   @db.VarChar(50)
+  zip_code          String?   @db.VarChar(20)
+  country           String?   @default("USA") @db.VarChar(100)
+  facebook_url      String?
+  instagram_url     String?
+  linkedin_url      String?
+  twitter_url       String?
+  youtube_url       String?
+  tiktok_url        String?
+  value_proposition String?
+  target_audience   String?
+  key_messages      Json?
+  brand_voice       String?
+  default_cta       String?
+  disclaimer_text   String?
+  hashtags          String[]
+  is_active         Boolean?  @default(true)
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  updated_at        DateTime? @default(now()) @db.Timestamp(6)
+  street_address    String?   @db.VarChar(255)
+  suite_apt         String?   @db.VarChar(100)
+  fax               String?   @db.VarChar(50)
+  toll_free_phone   String?   @db.VarChar(50)
+  business_hours    Json?
+  icon_url          String?
+  founded_year      Int?
+  languages         String[]
+  service_areas     String[]
+
+  @@index([is_active], map: "idx_company_branding_active")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model content_generated {
+  id                    Int             @id @default(autoincrement())
+  theme_id              String?
+  day_of_week           Int
+  content_type          String          @db.VarChar(50)
+  scheduled_time        DateTime        @db.Time(6)
+  scheduled_date        DateTime        @db.Date
+  social_networks       String[]        @default([])
+  file_path             String?         @db.VarChar(500)
+  file_type             String?         @db.VarChar(10)
+  directory_type        String?         @db.VarChar(50)
+  status                String          @default("pending") @db.VarChar(20)
+  n8n_execution_id      String?         @db.VarChar(100)
+  operation_id          String?
+  format_id             Int?
+  preview_generated_at  DateTime?       @db.Timestamp(6)
+  published_at          DateTime?       @db.Timestamp(6)
+  created_at            DateTime?       @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?       @default(now()) @db.Timestamp(6)
+  format_type           String?         @default("video") @db.VarChar(20)
+  image_format_id       Int?
+  is_primary            Boolean?        @default(true)
+  usage_context         String?         @default("main_content")
+  generation_params     Json?           @default("{}")
+  generation_error      String?
+  generated_content_url String?         @db.VarChar(500)
+  video_formats         video_formats?  @relation(fields: [format_id], references: [id], onUpdate: NoAction)
+  image_formats         image_formats?  @relation(fields: [image_format_id], references: [id], onUpdate: NoAction)
+  video_operations      VideoOperation? @relation(fields: [operation_id], references: [id], onUpdate: NoAction)
+  theme_planning        ThemePlanning?  @relation(fields: [theme_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([content_type], map: "idx_content_generated_content_type")
+  @@index([scheduled_date, scheduled_time], map: "idx_content_generated_date_time")
+  @@index([day_of_week, content_type], map: "idx_content_generated_day_type")
+  @@index([format_type], map: "idx_content_generated_format_type")
+  @@index([image_format_id], map: "idx_content_generated_image_format_id")
+  @@index([status], map: "idx_content_generated_status")
+  @@index([theme_id], map: "idx_content_generated_theme_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model content_schedule {
+  id                Int       @id @default(autoincrement())
+  day_of_week       Int
+  content_type      String    @db.VarChar(50)
+  optimal_time      DateTime  @db.Time(6)
+  network_name      String    @db.VarChar(50)
+  rotation_sequence Int?      @default(1)
+  is_active         Boolean?  @default(true)
+  description       String?
+  duration_seconds  Int?
+  created_at        DateTime? @default(now()) @db.Timestamp(6)
+  updated_at        DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([is_active], map: "idx_content_schedule_active")
+  @@index([day_of_week, optimal_time], map: "idx_content_schedule_day_time")
+  @@index([content_type], map: "idx_content_schedule_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model image_formats {
+  id                       Int                 @id @default(autoincrement())
+  format_name              String              @db.VarChar(255)
+  description              String?
+  reference_image_path     String?             @db.VarChar(500)
+  image_width              Int?
+  image_height             Int?
+  aspect_ratio             String?             @db.VarChar(20)
+  file_format              String?             @db.VarChar(10)
+  file_size_bytes          BigInt?
+  color_space              String?             @db.VarChar(50)
+  dpi                      Int?
+  composition_style        String?             @db.VarChar(100)
+  focal_points             String?
+  visual_hierarchy         String?
+  color_palette            String?
+  color_scheme             String?             @db.VarChar(50)
+  contrast_level           String?             @db.VarChar(50)
+  saturation_level         String?             @db.VarChar(50)
+  visual_style             String?
+  lighting_style           String?             @db.VarChar(100)
+  artistic_style           String?             @db.VarChar(100)
+  content_type             String?             @db.VarChar(100)
+  target_audience          String?
+  key_message              String?
+  has_text                 Boolean?            @default(false)
+  text_style               String?
+  has_cta                  Boolean?            @default(false)
+  cta_text                 String?
+  typography_analysis      String?
+  iconography              String?
+  shapes_patterns          String?
+  spacing_analysis         String?
+  replication_prompt       String?
+  negative_prompt          String?
+  recommended_ai_model     String?             @db.VarChar(100)
+  recommended_resolution   String?             @db.VarChar(50)
+  recommended_aspect_ratio String?             @db.VarChar(20)
+  recommended_quality      String?             @db.VarChar(50)
+  category                 String?             @db.VarChar(100)
+  tags                     String?
+  use_case                 String?
+  is_active                Boolean?            @default(true)
+  is_template              Boolean?            @default(true)
+  usage_count              Int?                @default(0)
+  success_rate             Decimal?            @default(0.00) @db.Decimal(5, 2)
+  created_at               DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at               DateTime?           @default(now()) @db.Timestamp(6)
+  last_used_at             DateTime?           @db.Timestamp(6)
+  content_generated        content_generated[]
+
+  @@index([format_name], map: "idx_image_formats_format_name")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model video_formats {
+  id                     Int                 @id @default(autoincrement())
+  format_name            String              @unique @db.VarChar(255)
+  description            String?
+  duration_seconds       Decimal?            @db.Decimal(10, 2)
+  resolution             String?             @db.VarChar(50)
+  aspect_ratio           String?             @db.VarChar(20)
+  format                 String?             @db.VarChar(50)
+  overall_description    String?
+  visual_style           String?
+  technical_quality      String?
+  content_themes         String?
+  mood_and_tone          String?
+  composition_analysis   String?
+  lighting_analysis      String?
+  color_palette          String?
+  camera_movements       String?
+  motion_analysis        String?
+  motion_intensity       String?             @db.VarChar(200)
+  scene_transitions      String?
+  has_audio              Boolean?            @default(false)
+  audio_analysis         String?
+  voice_style            String?             @db.VarChar(200)
+  replication_prompt     String?
+  negative_prompt        String?
+  recommended_veo_model  String?             @db.VarChar(200)
+  recommended_resolution String?             @db.VarChar(100)
+  recommended_duration   Int?
+  category               String?             @db.VarChar(100)
+  tags                   String?
+  is_active              Boolean?            @default(true)
+  is_template            Boolean?            @default(false)
+  usage_count            Int?                @default(0)
+  success_rate           Decimal?            @default(0.0) @db.Decimal(5, 2)
+  created_at             DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?           @default(now()) @db.Timestamp(6)
+  last_used_at           DateTime?           @db.Timestamp(6)
+  content_type           String?             @db.VarChar(50)
+  content_generated      content_generated[]
+
+  @@index([is_active], map: "idx_video_formats_active")
+  @@index([category], map: "idx_video_formats_category")
+  @@index([content_type], map: "idx_video_formats_content_type")
+  @@index([created_at(sort: Desc)], map: "idx_video_formats_created")
+  @@index([format_name], map: "idx_video_formats_name")
+  @@index([is_template], map: "idx_video_formats_template")
 }

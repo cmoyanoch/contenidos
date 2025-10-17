@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     // Obtener el usuario de la base de datos
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true }
+      select: { id: true, role: true }
     })
 
     if (!user) {
@@ -33,8 +33,9 @@ export async function GET(request: NextRequest) {
 
     const userId = user.id
 
+    // Si es admin, mostrar todas las temáticas. Si es user, solo las propias
     const themes = await prisma.themePlanning.findMany({
-      where: { userId },
+      where: user.role === 'admin' ? {} : { userId },
       orderBy: { startDate: 'asc' }
     })
 

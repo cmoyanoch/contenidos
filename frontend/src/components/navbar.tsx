@@ -34,13 +34,8 @@ function Navbar() {
     return () => clearTimeout(timer)
   }, [])
 
-  // No mostrar navbar en páginas de auth
-  if (pathname === '/' || pathname === '/login' || pathname === '/register') {
-    return null
-  }
-
   // Obtener rol del usuario solo cuando esté completamente hidratado
-  useEffect(() => { // eslint-disable-line react-hooks/rules-of-hooks
+  useEffect(() => {
     const fetchUserRole = async () => {
       if (isHydrated && isMounted && session?.user?.email) { // ✅ Doble verificación
         try {
@@ -57,6 +52,11 @@ function Navbar() {
     }
     fetchUserRole()
   }, [session, isMounted, isHydrated]) // ✅ Agregar isHydrated a dependencias
+
+  // No mostrar navbar en páginas de auth
+  if (pathname === '/' || pathname === '/login' || pathname === '/register') {
+    return null
+  }
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' })

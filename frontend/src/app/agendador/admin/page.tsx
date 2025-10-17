@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { config } from '../../../lib/config';
 
 // ✅ Interface para Webhooks
 interface Webhook {
@@ -101,7 +102,7 @@ export default function AdminPage() {
 
       if (response.ok) {
         setMessage('✅ Credenciales guardadas exitosamente')
-        setTimeout(() => setMessage(''), 3000)
+        setTimeout(() => setMessage(''), config.app.timeout)
       } else {
         setMessage('❌ Error al guardar credenciales')
       }
@@ -229,7 +230,7 @@ export default function AdminPage() {
 
       if (response.ok) {
         setMessage('✅ Credenciales de Google guardadas exitosamente')
-        setTimeout(() => setMessage(''), 3000)
+        setTimeout(() => setMessage(''), config.app.timeout)
       } else {
         setMessage('❌ Error al guardar credenciales de Google')
       }
@@ -497,7 +498,7 @@ export default function AdminPage() {
                   </label>
                   <input
                     type="url"
-                    placeholder="http://localhost:5678/webhook/8f3ed26d-69a1-4d67-8baf-a529fd76519f"
+                    placeholder={`${config.services.n8n}/webhook/8f3ed26d-69a1-4d67-8baf-a529fd76519f`}
                     value={editingWebhook ? editingWebhook.url : newWebhook.url}
                     onChange={(e) => editingWebhook
                       ? setEditingWebhook({...editingWebhook, url: e.target.value})
@@ -777,35 +778,35 @@ export default function AdminPage() {
           <h2 className="text-xl font-bold text-white mb-4">🔗 Enlaces Rápidos</h2>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <a
-              href="http://localhost:8001/docs"
+              href={`${config.api.google}/docs`}
               target="_blank"
               className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md text-center transition-colors"
             >
               📖 API Docs
             </a>
             <a
-              href="http://localhost:8002/docs"
+              href={`${config.api.rrss}/docs`}
               target="_blank"
               className="bg-cyan-600 hover:bg-cyan-700 text-white py-3 px-4 rounded-md text-center transition-colors"
             >
               🌐 API RRSS
             </a>
             <a
-              href="http://localhost:5050"
+              href={config.services.pgadmin}
               target="_blank"
               className="bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-md text-center transition-colors"
             >
               🐘 pgAdmin
             </a>
             <a
-              href="http://localhost:5678"
+              href={config.services.n8n}
               target="_blank"
               className="bg-purple-600 hover:bg-purple-700 text-white py-3 px-4 rounded-md text-center transition-colors"
             >
               🔄 N8N
             </a>
             <a
-              href="http://localhost:5556"
+              href={config.services.flower}
               target="_blank"
               className="bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-md text-center transition-colors"
             >

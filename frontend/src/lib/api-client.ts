@@ -1,5 +1,7 @@
 // Cliente para interactuar con la API de Veo 3.0
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'
+import { config } from './config';
+
+const API_BASE_URL = config.api.google
 
 export interface VideoGenerationRequest {
   prompt: string

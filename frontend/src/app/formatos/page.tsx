@@ -2,6 +2,8 @@
 
 import { CheckCircle2, Image as ImageIcon, RefreshCw, Search, Trash2, Upload, Video } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useHydration } from '../../hooks/use-hydration';
+import { buildApiUrl, buildN8nWebhookUrl } from '../../lib/config';
 
 interface VideoFormat {
   id: number
@@ -36,6 +38,9 @@ interface ImageFormat {
 }
 
 export default function FormatsPage() {
+  // ✅ Hook de hidratación para prevenir errores de hidratación
+  const isHydrated = useHydration()
+
   // Estados principales
   const [formatType, setFormatType] = useState<'video' | 'image'>('video')
   const [videoFormats, setVideoFormats] = useState<VideoFormat[]>([])
@@ -101,11 +106,20 @@ export default function FormatsPage() {
 
   // Load formats on mount and when type changes
   useEffect(() => {
-    loadFormats()
+    // ✅ Solo cargar formatos después de la hidratación
+    if (isHydrated) {
+      loadFormats()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formatType, categoryFilter])
+  }, [formatType, categoryFilter, isHydrated])
 
   const loadFormats = async () => {
+    // ✅ Validar que estamos hidratados antes de hacer fetch
+    if (!isHydrated) {
+      console.log('⏳ Esperando hidratación antes de cargar formatos...')
+      return
+    }
+
     try {
       setLoading(true)
       const params = new URLSearchParams()
@@ -113,20 +127,74 @@ export default function FormatsPage() {
         params.append('category', categoryFilter)
       }
 
-      // Usar variable de entorno para la URL del backend
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'
+      const url = formatType === 'video'
+        ? buildApiUrl(`/api/v1/formats/list?${params}`)
+        : buildApiUrl(`/api/v1/image-formats/?${params}`)
 
-      if (formatType === 'video') {
-        const response = await fetch(`${API_BASE_URL}/api/v1/formats/list?${params}`)
+      console.log('🔗 Cargando formatos:', {
+        formatType,
+        categoryFilter,
+        url,
+        isHydrated,
+        env: {
+          NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+          NODE_ENV: process.env.NODE_ENV
+        }
+      })
+
+      // ✅ Agregar timeout y mejor manejo de errores
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 segundos timeout
+
+      try {
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          // ✅ Asegurar que no use caché en desarrollo
+          cache: 'no-store'
+        })
+
+        clearTimeout(timeoutId)
+
+        console.log('📡 Respuesta recibida:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          headers: Object.fromEntries(response.headers.entries())
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error('❌ Error de respuesta:', errorText)
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
+        }
+
         const data = await response.json()
-        setVideoFormats(data.formats || [])
-      } else {
-        const response = await fetch(`${API_BASE_URL}/api/v1/image-formats/?${params}`)
-        const data = await response.json()
-        setImageFormats(data.formats || [])
+
+        if (formatType === 'video') {
+          setVideoFormats(data.formats || [])
+          console.log('✅ Formatos de video cargados:', data.formats?.length || 0)
+        } else {
+          setImageFormats(data.formats || [])
+          console.log('✅ Formatos de imagen cargados:', data.formats?.length || 0)
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId)
+        throw fetchError
       }
     } catch (error) {
-      console.error('Error loading formats:', error)
+      console.error('❌ Error loading formats:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        name: error instanceof Error ? error.name : 'Unknown',
+        stack: error instanceof Error ? error.stack : undefined
+      })
+
+      // ✅ Mostrar mensaje de error al usuario
+      alert(`Error al cargar formatos: ${error instanceof Error ? error.message : 'Error desconocido'}`)
     } finally {
       setLoading(false)
     }
@@ -164,8 +232,8 @@ export default function FormatsPage() {
       const contentType = captureForm.content_type
       const isVideo = contentType === 'video_person' || contentType === 'video_avatar' || contentType === 'cta_post'
       const webhookUrl = isVideo
-        ? 'http://localhost:5678/webhook/2993b51b-bc56-4068-ac50-710be6239549'  // Webhook para videos
-        : 'http://localhost:5678/webhook/format-capture'  // Webhook para imágenes
+        ? buildN8nWebhookUrl('2993b51b-bc56-4068-ac50-710be6239549')  // Webhook para videos
+        : buildN8nWebhookUrl('format-capture')  // Webhook para imágenes
 
       // Call N8N webhook
       const response = await fetch(webhookUrl, {
@@ -216,8 +284,8 @@ export default function FormatsPage() {
 
     try {
       const endpoint = formatType === 'video'
-        ? `http://localhost:8001/api/v1/formats/${formatId}`
-        : `http://localhost:8001/api/v1/image-formats/${formatId}`
+        ? buildApiUrl(`/api/v1/formats/${formatId}`)
+        : buildApiUrl(`/api/v1/image-formats/${formatId}`)
 
       const response = await fetch(endpoint, {
         method: 'DELETE'
@@ -245,6 +313,18 @@ export default function FormatsPage() {
     format.format_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (format.description && format.description.toLowerCase().includes(searchTerm.toLowerCase()))
   )
+
+  // ✅ Mostrar loading mientras se hidrata
+  if (!isHydrated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 pt-20 pb-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando formatos...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 pt-20 pb-8">

@@ -61,12 +61,18 @@ app = FastAPI(
 )
 
 # Configurar middlewares
+settings = get_settings()
+
+# ✅ CORS configurado desde variables de entorno
+cors_origins = settings.CORS_ORIGINS.split(",") if settings.CORS_ORIGINS else []
+cors_methods = settings.CORS_ALLOW_METHODS.split(",") if settings.CORS_ALLOW_METHODS else ["GET", "POST"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Solo orígenes específicos
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH", "DELETE", "PUT"],
-    allow_headers=["*"],
+    allow_origins=cors_origins,
+    allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
+    allow_methods=cors_methods,
+    allow_headers=[settings.CORS_ALLOW_HEADERS] if settings.CORS_ALLOW_HEADERS != "*" else ["*"],
 )
 
 # Crear instancia global de UsageMonitorMiddleware

@@ -2,6 +2,8 @@
 
 import { Building2, Palette, Plus, Trash2, Users } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
+import { useHydration } from '../../hooks/use-hydration';
+import { buildApiUrl, buildIconUrl, buildN8nWebhookUrl, buildUploadUrl, config } from '../../lib/config';
 
 interface StaffEmployee {
   id: number
@@ -57,6 +59,9 @@ interface CompanyBranding {
 }
 
 export default function CompanyPage() {
+  // ✅ Hook de hidratación para prevenir errores de hidratación
+  const isHydrated = useHydration()
+
   const [activeTab, setActiveTab] = useState<'staff' | 'branding'>('staff')
   const [staff, setStaff] = useState<StaffEmployee[]>([])
   const [branding, setBranding] = useState<CompanyBranding | null>(null)
@@ -125,7 +130,7 @@ export default function CompanyPage() {
   const loadStaff = async () => {
     try {
       setLoading(true)
-      const response = await fetch('http://localhost:8001/api/v1/staff/list')
+      const response = await fetch(buildApiUrl('/api/v1/staff/list'))
       if (response.ok) {
         const data = await response.json()
         setStaff(data.staff || [])
@@ -140,7 +145,7 @@ export default function CompanyPage() {
   // Cargar branding existente
   const loadBranding = async () => {
     try {
-      const response = await fetch('http://localhost:8001/api/v1/branding/active')
+      const response = await fetch(buildApiUrl('/api/v1/branding/active'))
       if (response.ok) {
         const data = await response.json()
         setBranding(data)
@@ -167,7 +172,7 @@ export default function CompanyPage() {
       formData.append('nombre', staffForm.name)
       formData.append('cargo', staffForm.position)
 
-      const response = await fetch('http://localhost:5678/webhook/a40ee3f0-432a-42b1-ba82-196cfc842883', {
+      const response = await fetch(buildN8nWebhookUrl(config.webhooks.staff), {
         method: 'POST',
         body: formData,
       })
@@ -196,7 +201,7 @@ export default function CompanyPage() {
 
     try {
       setLoading(true)
-      const response = await fetch(`http://localhost:8001/api/v1/staff/${staffId}`, {
+      const response = await fetch(buildApiUrl(`/api/v1/staff/${staffId}`), {
         method: 'DELETE',
       })
 
@@ -229,7 +234,7 @@ export default function CompanyPage() {
         founded_year: brandingForm.founded_year ? parseInt(brandingForm.founded_year) : null
       }
 
-      const response = await fetch('http://localhost:8001/api/v1/branding/active', {
+      const response = await fetch(buildApiUrl('/api/v1/branding/active'), {
         method: branding ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -276,7 +281,7 @@ export default function CompanyPage() {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await fetch('http://localhost:8001/api/v1/branding/upload-icon', {
+      const response = await fetch(buildApiUrl('/api/v1/branding/upload-icon'), {
         method: 'POST',
         body: formData,
       })
@@ -299,9 +304,12 @@ export default function CompanyPage() {
   }
 
   useEffect(() => {
-    loadStaff()
-    loadBranding()
-  }, [])
+    // ✅ Solo cargar datos después de la hidratación
+    if (isHydrated) {
+      loadStaff()
+      loadBranding()
+    }
+  }, [isHydrated])
 
   // Cargar datos existentes en el formulario de branding
   useEffect(() => {
@@ -355,6 +363,18 @@ export default function CompanyPage() {
       })
     }
   }, [branding])
+
+  // ✅ Mostrar loading mientras se hidrata
+  if (!isHydrated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 pt-20 pb-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 pt-20 pb-8">
@@ -433,8 +453,8 @@ export default function CompanyPage() {
                           {/* Imagen Original */}
                           <img
                             src={employee.original_image_url
-                              ? `http://localhost:8001/uploads/${employee.original_image_url}`
-                              : `http://localhost:8001/uploads/${employee.image_url_1}`
+                              ? buildUploadUrl(employee.original_image_url)
+                              : buildUploadUrl(employee.image_url_1)
                             }
                             alt={employee.name}
                             className="w-32 h-48 object-cover rounded-lg border-2 border-gray-300 shadow-sm"
@@ -994,7 +1014,7 @@ export default function CompanyPage() {
                     <div className="mb-4">
                       <p className="text-sm text-gray-600 mb-2">Current Icon:</p>
                       <img
-                        src={`http://localhost:8001/uploads/icons/${brandingForm.icon_url}`}
+                        src={buildIconUrl(brandingForm.icon_url)}
                         alt="Company Icon"
                         className="w-16 h-16 object-cover rounded-lg border-2 border-gray-300 shadow-sm"
                         onError={(e) => {

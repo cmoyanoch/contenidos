@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { getServerSession } from 'next-auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { config } from '../../../../lib/config';
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,13 +31,13 @@ export async function POST(request: NextRequest) {
     // Si es una ruta relativa, convertirla a URL absoluta del proyecto
     if (image_url.startsWith('/')) {
       // Asumir que las rutas relativas son del proyecto local
-      finalImageUrl = `http://localhost:3000${image_url}`
+      finalImageUrl = `${config.app.name === 'ContentFlow' ? 'http://localhost:3010' : 'http://localhost:3000'}${image_url}`
     }
 
     console.log('🌐 URL final de imagen:', finalImageUrl)
 
     // Llamar a la API de Google Veo con URL de imagen
-    const veoResponse = await fetch('http://api_google:8000/api/v1/generate/image-to-video', {
+    const veoResponse = await fetch(`${config.api.google.replace('localhost:8001', 'api_google:8000')}/api/v1/generate/image-to-video`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

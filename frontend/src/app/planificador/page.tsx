@@ -10,6 +10,7 @@ import { Calendar, momentLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useHydration } from '../../hooks/use-hydration';
 import { useThemes } from '../../hooks/use-themes';
+import { buildApiUrl, buildN8nWebhookUrl, config } from '../../lib/config';
 
 // Configurar moment en español
 moment.locale('es', {
@@ -22,6 +23,35 @@ moment.locale('es', {
 })
 
 const localizer = momentLocalizer(moment)
+
+// Función para ajustar fechas a días hábiles (misma lógica que use-themes.ts)
+const adjustToBusinessDay = (date: Date, isStartDate: boolean): Date => {
+  // ✅ CORREGIR PROBLEMA DE TIMEZONE: Crear fecha local sin conversión UTC
+  const dateString = date.toISOString().split('T')[0] // Obtener YYYY-MM-DD
+  const [year, month, day] = dateString.split('-').map(Number)
+  const adjustedDate = new Date(year, month - 1, day) // Crear fecha local
+  const dayOfWeek = adjustedDate.getDay() // 0=Domingo, 6=Sábado
+
+  if (dayOfWeek === 0) { // Domingo
+    if (isStartDate) {
+      // Fecha inicio en domingo → siguiente lunes
+      adjustedDate.setDate(adjustedDate.getDate() + 1)
+    } else {
+      // Fecha final en domingo → viernes anterior
+      adjustedDate.setDate(adjustedDate.getDate() - 2)
+    }
+  } else if (dayOfWeek === 6) { // Sábado
+    if (isStartDate) {
+      // Fecha inicio en sábado → siguiente lunes
+      adjustedDate.setDate(adjustedDate.getDate() + 2)
+    } else {
+      // Fecha final en sábado → viernes anterior
+      adjustedDate.setDate(adjustedDate.getDate() - 1)
+    }
+  }
+
+  return adjustedDate
+}
 
 export default function PlanificadorPage() {
   const [showModal, setShowModal] = useState(false)
@@ -63,11 +93,24 @@ export default function PlanificadorPage() {
 
   // Cargar contenido específico del día seleccionado
   const loadCurrentDayContent = async (themeId: string, dayOfWeek: number, contentType: string) => {
+    // ✅ Validar parámetros antes de hacer la llamada
+    if (!themeId || dayOfWeek === undefined || dayOfWeek === null || !contentType) {
+      console.warn('⚠️ Parámetros inválidos para loadCurrentDayContent:', { themeId, dayOfWeek, contentType })
+      setCurrentDayContent(null)
+      return
+    }
+
     setLoadingContent(true)
     try {
-      const response = await fetch(`http://localhost:8001/api/v1/content-generated/?theme_id=${themeId}&day_of_week=${dayOfWeek}&content_type=${contentType}`)
+      const url = buildApiUrl(`/api/v1/content-generated/?theme_id=${themeId}&day_of_week=${dayOfWeek}&content_type=${contentType}`)
+      console.log('🔗 URL de la API:', url)
+      console.log('📊 Parámetros:', { themeId, dayOfWeek, contentType })
+
+      const response = await fetch(url)
       if (!response.ok) {
-        throw new Error('Error al cargar contenido del día')
+        const errorText = await response.text()
+        console.error('❌ Error de respuesta:', response.status, errorText)
+        throw new Error(`Error al cargar contenido del día: ${response.status}`)
       }
       const data = await response.json()
       // Obtener solo el primer resultado (debería ser único)
@@ -169,8 +212,7 @@ export default function PlanificadorPage() {
       })
 
       // Llamar DIRECTAMENTE al webhook de N8N para generar contenido
-      const N8N_WEBHOOK_URL = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL || 'http://localhost:5678/webhook'
-      const WEBHOOK_ID = '243dbf2d-f504-43b6-86b6-5fb736cc86fc' // ID del webhook del workflow "Planificador de Contenidos"
+      const WEBHOOK_ID = config.webhooks.planificador // ID del webhook del workflow "Planificador de Contenidos"
 
       // Convertir hora sugerida a formato TIME (HH:MM:SS)
       const parseTimeTo24Hour = (timeString: string) => {
@@ -258,12 +300,12 @@ export default function PlanificadorPage() {
       }
 
       console.log('📤 Enviando datos al webhook:', {
-        url: `${N8N_WEBHOOK_URL}/${WEBHOOK_ID}`,
+        url: buildN8nWebhookUrl(config.webhooks.planificador),
         method: 'POST',
         payload: payload
       })
 
-      const response = await fetch(`${N8N_WEBHOOK_URL}/${WEBHOOK_ID}`, {
+      const response = await fetch(buildN8nWebhookUrl(config.webhooks.planificador), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -406,9 +448,9 @@ export default function PlanificadorPage() {
       console.log('📤 Enviando temáticas a N8N webhook:', themesData)
 
       // Llamar DIRECTAMENTE al webhook de N8N para sincronizar
-      const N8N_WEBHOOK_URL = process.env.NEXT_PUBLIC_N8N_WEBHOOK_URL || 'http://localhost:5678/webhook'
+      // Usar configuración centralizada
 
-      const response = await fetch(`${N8N_WEBHOOK_URL}/content-scheduler-sync`, {
+      const response = await fetch(buildN8nWebhookUrl('content-scheduler-sync'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -429,7 +471,7 @@ export default function PlanificadorPage() {
       console.log('✅ Sincronización exitosa:', result)
 
       setSyncStatus('✅ Sincronización completada')
-      setTimeout(() => setSyncStatus(''), 3000)
+      setTimeout(() => setSyncStatus(''), config.app.timeout)
 
       // Mostrar resumen de sincronización
       alert(`✅ Sincronización completada:\n- ${themesData.length} temáticas sincronizadas\n- Workflow N8N activado exitosamente`)
@@ -437,7 +479,7 @@ export default function PlanificadorPage() {
     } catch (error) {
       console.error('Error sincronizando con N8N:', error)
       setSyncStatus('❌ Error en sincronización')
-      setTimeout(() => setSyncStatus(''), 3000)
+      setTimeout(() => setSyncStatus(''), config.app.timeout)
       alert(`❌ Error en sincronización: ${error instanceof Error ? error.message : 'Error desconocido'}`)
     }
   }
@@ -446,8 +488,7 @@ export default function PlanificadorPage() {
   const loadN8nLogs = async () => {
     try {
       // Abrir la interfaz de N8N en una nueva pestaña
-      const N8N_URL = process.env.NEXT_PUBLIC_N8N_URL || 'http://localhost:5678'
-      window.open(`${N8N_URL}/workflow`, '_blank')
+      window.open(`${config.services.n8n}/workflow`, '_blank')
 
       alert('ℹ️ Se abrirá la interfaz de N8N donde puedes ver todos los workflows y sus ejecuciones')
 
@@ -833,8 +874,8 @@ export default function PlanificadorPage() {
                       <div className="flex items-center gap-2 text-xs text-blue-100 mb-2">
                         <span>📅</span>
                         <span>
-                          {new Date(theme.startDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} - {' '}
-                          {new Date(theme.endDate).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                          {adjustToBusinessDay(new Date(theme.startDate), true).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })} - {' '}
+                          {adjustToBusinessDay(new Date(theme.endDate), false).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                         </span>
                       </div>
 
@@ -1110,6 +1151,14 @@ export default function PlanificadorPage() {
           popup
           popupOffset={{ x: 10, y: 10 }}
           showMultiDayTimes={false}
+          onNavigate={(newDate: Date) => {
+            console.log('📅 Navegación del calendario:', newDate)
+            // El calendario maneja automáticamente la navegación
+          }}
+          onView={(newView: string) => {
+            console.log('📅 Cambio de vista:', newView)
+            // El calendario maneja automáticamente el cambio de vista
+          }}
           messages={{
             next: 'Siguiente',
             previous: 'Anterior',
@@ -1486,7 +1535,7 @@ export default function PlanificadorPage() {
                     <div>
                       <p className="text-sm font-medium text-gray-500 mb-1">Período</p>
                       <p className="text-gray-700">
-                        📅 {moment(selectedTheme.startDate).format('DD MMMM YYYY')} - {moment(selectedTheme.endDate).format('DD MMMM YYYY')}
+                        📅 {moment(adjustToBusinessDay(new Date(selectedTheme.startDate), true)).format('DD MMMM YYYY')} - {moment(adjustToBusinessDay(new Date(selectedTheme.endDate), false)).format('DD MMMM YYYY')}
                       </p>
                     </div>
 

@@ -248,6 +248,35 @@ export const useThemes = () => {
   }
 
 
+  // Función para ajustar fechas a días hábiles
+  const adjustToBusinessDay = (date: Date, isStartDate: boolean): Date => {
+    // ✅ CORREGIR PROBLEMA DE TIMEZONE: Crear fecha local sin conversión UTC
+    const dateString = date.toISOString().split('T')[0] // Obtener YYYY-MM-DD
+    const [year, month, day] = dateString.split('-').map(Number)
+    const adjustedDate = new Date(year, month - 1, day) // Crear fecha local
+    const dayOfWeek = adjustedDate.getDay() // 0=Domingo, 6=Sábado
+
+    if (dayOfWeek === 0) { // Domingo
+      if (isStartDate) {
+        // Fecha inicio en domingo → siguiente lunes
+        adjustedDate.setDate(adjustedDate.getDate() + 1)
+      } else {
+        // Fecha final en domingo → viernes anterior
+        adjustedDate.setDate(adjustedDate.getDate() - 2)
+      }
+    } else if (dayOfWeek === 6) { // Sábado
+      if (isStartDate) {
+        // Fecha inicio en sábado → siguiente lunes
+        adjustedDate.setDate(adjustedDate.getDate() + 2)
+      } else {
+        // Fecha final en sábado → viernes anterior
+        adjustedDate.setDate(adjustedDate.getDate() - 1)
+      }
+    }
+
+    return adjustedDate
+  }
+
   // Generar eventos diarios para React Big Calendar (eventos de todo el día)
   const generateCalendarEvents = (themes: ThemePlanning[]) => {
     const events: Array<{
@@ -267,11 +296,15 @@ export const useThemes = () => {
       const startDate = new Date(theme.startDate)
       const endDate = new Date(theme.endDate)
 
-      // Normalizar fechas para comparación (solo fecha, sin hora)
-      const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
-      const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())
+      // ✅ AJUSTAR FECHAS A DÍAS HÁBILES
+      const adjustedStartDate = adjustToBusinessDay(startDate, true)  // true = fecha inicio
+      const adjustedEndDate = adjustToBusinessDay(endDate, false)     // false = fecha final
 
-      // Generar eventos día por día dentro del rango exacto
+      // Normalizar fechas para comparación (solo fecha, sin hora)
+      const startDateOnly = new Date(adjustedStartDate.getFullYear(), adjustedStartDate.getMonth(), adjustedStartDate.getDate())
+      const endDateOnly = new Date(adjustedEndDate.getFullYear(), adjustedEndDate.getMonth(), adjustedEndDate.getDate())
+
+      // Generar eventos día por día dentro del rango ajustado
       const currentDate = new Date(startDateOnly)
 
       while (currentDate <= endDateOnly) {

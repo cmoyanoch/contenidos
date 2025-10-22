@@ -62,15 +62,15 @@ class VideoStatusResponse(BaseModel):
     error_message: Optional[str] = Field(None, description="Mensaje de error si aplica")
 
 class ImageGenerationRequest(BaseModel):
-    """Request para generación de imagen con Gemini (soporta hasta 2 imágenes)"""
-    imagePrompt: str = Field(..., description="Prompt para generar/combinar la(s) imagen(es)", max_length=2048)
+    """Request para generación de imagen con Gemini (soporta hasta 2 imágenes o generación desde cero)"""
+    imagePrompt: str = Field(..., description="Prompt para generar/combinar la(s) imagen(es)", max_length=15000)
 
-    # Primera imagen (obligatoria) - SOPORTA MULTI-FORMATO
-    imageDataUrl: str = Field(
-        ...,
-        description="Primera imagen. Soporta: 1) Base64 puro, 2) Data URL (data:image/...;base64,...), 3) Ruta local (/uploads/...), 4) URL remota (http://...)"
+    # Primera imagen (OPCIONAL - permite generación desde cero) - SOPORTA MULTI-FORMATO
+    imageDataUrl: Optional[str] = Field(
+        None,
+        description="Primera imagen (opcional). Soporta: 1) Base64 puro, 2) Data URL (data:image/...;base64,...), 3) Ruta local (/uploads/...), 4) URL remota (http://...). Si es None o vacío, genera imagen desde cero usando solo imagePrompt"
     )
-    mimeType: str = Field(..., description="Tipo MIME de la primera imagen (ej: image/jpeg, image/png). Auto-detectado si no se proporciona para rutas locales/URLs")
+    mimeType: Optional[str] = Field(None, description="Tipo MIME de la primera imagen (ej: image/jpeg, image/png). Auto-detectado si no se proporciona para rutas locales/URLs")
 
     # Segunda imagen (opcional) - SOPORTA MULTI-FORMATO
     imageDataUrl2: Optional[str] = Field(
@@ -83,6 +83,12 @@ class ImageGenerationRequest(BaseModel):
     character_style: Optional[str] = Field(
         default="realistic",
         description="Estilo del personaje: 'realistic' (foto real) o 'pixar' (estilo Pixar cartoon)"
+    )
+
+    # Configuración de imagen
+    aspect_ratio: Optional[Literal["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"]] = Field(
+        default=None,
+        description="Relación de aspecto de la imagen generada (ej: 16:9 para YouTube, 9:16 para Stories, 1:1 para Instagram Feed)"
     )
 
     temperature: Optional[float] = Field(default=0.7, description="Temperatura para generación", ge=0.0, le=2.0)

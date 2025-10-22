@@ -131,6 +131,172 @@ async def get_random_staff_simple(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error obteniendo empleado aleatorio: {str(e)}")
 
+@router.get("/random-with-analysis", response_model=dict)
+async def get_random_staff_with_analysis(
+    content_type: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene un empleado del staff de forma ALEATORIA con análisis físico completo.
+
+    **Endpoint SIN autenticación para uso en N8N.**
+
+    **Parámetros:**
+    - content_type (obligatorio): Tipo de contenido ("video_person", "video_avatar", "cta_post", etc.)
+
+    **Lógica de selección de imagen:**
+    - Si content_type = "video_avatar" → retorna image_url_1 (avatar 3D)
+    - Para cualquier otro content_type → retorna image_url_2 (foto realista) [DEFAULT]
+
+    **Ejemplo:**
+    ```
+    GET /api/v1/staff/random-with-analysis?content_type=video_person
+    ```
+
+    **Respuesta:**
+    ```json
+    {
+      "success": true,
+      "employee": {
+        "id": 24,
+        "name": "Raphaela Costa",
+        "position": "Insurance agent",
+        "image": "realistic/generated_image_xxx.png",
+        "description": "{\"physical\": {...}, \"prompt_templates\": {...}}"
+      }
+    }
+    ```
+    """
+    try:
+        # Obtener empleado aleatorio CON description
+        employee = db.execute(text("""
+            SELECT
+                se.id,
+                se.name,
+                se.position,
+                se.image_url_1,
+                se.image_url_2,
+                se.description
+            FROM api_google.staff_employee se
+            WHERE se.is_active = true
+            ORDER BY RANDOM()
+            LIMIT 1
+        """)).fetchone()
+
+        if not employee:
+            return {
+                "success": False,
+                "message": "No hay empleados activos",
+                "employee": None
+            }
+
+        # ✅ LÓGICA DE SELECCIÓN DE IMAGEN SEGÚN content_type
+        if content_type == "video_avatar":
+            selected_image = employee.image_url_1  # Avatar 3D
+        else:
+            # Para "video_person", "cta_post" y cualquier otro tipo
+            selected_image = employee.image_url_2  # Foto realista (DEFAULT)
+
+        return {
+            "success": True,
+            "employee": {
+                "id": employee.id,
+                "name": employee.name,
+                "position": employee.position,
+                "image": selected_image,  # ✅ CAMPO ÚNICO CON IMAGEN SELECCIONADA
+                "description": employee.description,
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo empleado aleatorio: {str(e)}")
+
+@router.get("/random-by-content-type", response_model=dict)
+async def get_random_staff_by_content_type(
+    content_type: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene un empleado del staff de forma ALEATORIA con UN SOLO campo image_url
+    basado en el content_type.
+
+    **Endpoint SIN autenticación para uso en N8N.**
+
+    **Parámetros:**
+    - content_type: "video_person" | "video_avatar" | "cta_post" | etc.
+
+    **Lógica de selección (basada en BD de formatos):**
+    - Si content_type = "video_person" o "cta_post" → image_url = image_url_2 (realista)
+    - Si content_type = "video_avatar" → image_url = image_url_1 (avatar)
+
+    **Ejemplo:**
+    ```
+    GET /api/v1/staff/random-by-content-type?content_type=video_person
+    ```
+
+    **Respuesta:**
+    ```json
+    {
+      "success": true,
+      "employee": {
+        "id": 24,
+        "name": "Raphaela Costa",
+        "position": "Insurance agent",
+        "image_url": "realistic/generated_image_xxx.png",
+        "description": "{\"physical\": {...}, \"prompt_templates\": {...}}",
+        "is_active": true
+      }
+    }
+    ```
+    """
+    try:
+        # Obtener empleado aleatorio CON description
+        employee = db.execute(text("""
+            SELECT
+                se.id,
+                se.name,
+                se.position,
+                se.original_image_url,
+                se.image_url_1,  -- Avatar
+                se.image_url_2,  -- Realista
+                se.description,
+                se.is_active,
+                se.created_at,
+                se.updated_at
+            FROM api_google.staff_employee se
+            WHERE se.is_active = true
+            ORDER BY RANDOM()
+            LIMIT 1
+        """)).fetchone()
+
+        if not employee:
+            return {
+                "success": False,
+                "message": "No hay empleados activos",
+                "employee": None
+            }
+
+        # ✅ LÓGICA DE SELECCIÓN DE IMAGEN (basada en BD de formatos)
+        if content_type == "video_person" or content_type == "cta_post":
+            selected_image_url = employee.image_url_2  # Realista (Real Person)
+        else:
+            selected_image_url = employee.image_url_1  # Avatar
+
+        return {
+            "success": True,
+            "employee": {
+                "id": employee.id,
+                "name": employee.name,
+                "position": employee.position,
+                "image_url": selected_image_url,  # ✅ UN SOLO CAMPO
+                "description": employee.description,
+                "is_active": employee.is_active,
+                "created_at": employee.created_at.isoformat() if employee.created_at else None,
+                "updated_at": employee.updated_at.isoformat() if employee.updated_at else None
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error obteniendo empleado aleatorio: {str(e)}")
+
 
 @router.get("/random", response_model=dict)
 async def get_random_staff(

@@ -93,7 +93,7 @@ class BatchImageAnalysisService:
             }
 
             # Llamada a Gemini API
-            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent"
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent"
 
             response = requests.post(url, headers=headers, json=payload, timeout=30)
 

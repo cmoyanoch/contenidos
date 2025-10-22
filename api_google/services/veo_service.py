@@ -435,7 +435,7 @@ class VeoService:
                 content_type = 'image/jpeg'
 
             # Configurar el modelo para generación de imágenes
-            model_name = "gemini-2.5-flash-image-preview"
+            model_name = "gemini-2.5-flash-image"
 
             # Crear el prompt con aspect ratio si se proporciona
             final_prompt = prompt

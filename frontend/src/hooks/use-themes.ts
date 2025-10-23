@@ -46,59 +46,59 @@ export const WEEKLY_TEMPLATE: WeeklySchedule = {
   monday: {
     type: 'video_person',
     duration: 24,
-    description: 'Generar un video de 24 segundos con una persona realista, relacionado con la temática',
-    title: 'Video promocional con persona realista (24s)',
+    description: 'Generate a 24-second video with a realistic person, related to the theme',
+    title: 'Promotional video with realistic person (24s)',
     suggestedTime: '10:00 AM',
-    suggestedTimeReason: '🌅 Inicio de semana - Alta atención en redes sociales',
+    suggestedTimeReason: '🌅 Start of week - High attention on social networks',
     recommendedNetworks: ['Facebook', 'Instagram Reels'],
-    networkStrategy: 'Videos de personas reales generan confianza. Facebook ideal para audiencia madura (seguros). Instagram Reels para alcance viral y audiencia más joven.'
+    networkStrategy: 'Real person videos generate trust. Facebook ideal for mature audience (insurance). Instagram Reels for viral reach and younger audience.'
   },
   tuesday: {
     type: 'image_stats',
-    description: 'Crear una imagen con estadísticas relevantes sobre la temática',
-    title: 'Imagen con estadísticas relevantes',
+    description: 'Create an image with relevant statistics about the theme',
+    title: 'Image with relevant statistics',
     suggestedTime: '11:00 AM',
-    suggestedTimeReason: '📊 Mejor día para engagement - Horario laboral pico',
+    suggestedTimeReason: '📊 Best day for engagement - Peak work hours',
     recommendedNetworks: ['LinkedIn', 'Facebook'],
-    networkStrategy: 'LinkedIn ama contenido con datos profesionales. Mejor día para engagement B2B. Facebook para alcance masivo y audiencia general.'
+    networkStrategy: 'LinkedIn loves professional data content. Best day for B2B engagement. Facebook for massive reach and general audience.'
   },
   wednesday: {
     type: 'video_avatar',
     duration: 24,
-    description: 'Producir un video de 24 segundos con un avatar animado (estilo Pixar), enfocado en la temática',
-    title: 'Video con avatar animado (24s)',
+    description: 'Produce a 24-second video with an animated avatar (Pixar style), focused on the theme',
+    title: 'Video with animated avatar (24s)',
     suggestedTime: '1:00 PM',
-    suggestedTimeReason: '🍽️ Mitad de semana - Hora del almuerzo, mayor engagement',
+    suggestedTimeReason: '🍽️ Mid-week - Lunch time, higher engagement',
     recommendedNetworks: ['Instagram Reels', 'TikTok', 'YouTube Shorts'],
-    networkStrategy: 'Contenido creativo funciona mejor en horario de almuerzo. TikTok e Instagram para contenido entretenido que educa. YouTube Shorts para alcance adicional.'
+    networkStrategy: 'Creative content works better at lunch time. TikTok and Instagram for entertaining content that educates. YouTube Shorts for additional reach.'
   },
   thursday: {
     type: 'cta_post',
-    description: 'Diseñar una publicación con un llamado a la acción (CTA) referente a la temática',
-    title: 'Publicación con CTA',
+    description: 'Design a post with a call to action (CTA) related to the theme',
+    title: 'Post with CTA',
     suggestedTime: '11:30 AM',
-    suggestedTimeReason: '💼 Pico de conversión - Jueves tiene mejor tasa de acción',
+    suggestedTimeReason: '💼 Conversion peak - Thursday has better action rate',
     recommendedNetworks: ['LinkedIn', 'Facebook', 'Instagram'],
-    networkStrategy: 'Jueves es el mejor día para conversiones. LinkedIn para leads B2B profesionales. Facebook e Instagram para audiencia que toma decisiones financieras.'
+    networkStrategy: 'Thursday is the best day for conversions. LinkedIn for professional B2B leads. Facebook and Instagram for audience making financial decisions.'
   },
   friday: {
     type: 'manual',
-    description: 'Espacio reservado para definir el contenido manualmente',
-    title: 'Contenido manual personalizado',
+    description: 'Reserved space to define content manually',
+    title: 'Custom manual content',
     suggestedTime: '10:00 AM',
-    suggestedTimeReason: '🎉 Viernes temprano - Antes del fin de semana',
+    suggestedTimeReason: '🎉 Early Friday - Before the weekend',
     recommendedNetworks: ['Instagram', 'Twitter/X', 'Facebook'],
-    networkStrategy: 'Viernes temprano antes del fin de semana. Instagram para engagement casual y visual. Twitter/X para conversaciones rápidas y trending topics.'
+    networkStrategy: 'Early Friday before the weekend. Instagram for casual and visual engagement. Twitter/X for quick conversations and trending topics.'
   },
   saturday: {
     type: 'free',
-    description: 'Sin contenido programado',
-    title: 'Día Libre'
+    description: 'No scheduled content',
+    title: 'Free Day'
   },
   sunday: {
     type: 'free',
-    description: 'Sin contenido programado',
-    title: 'Día Libre'
+    description: 'No scheduled content',
+    title: 'Free Day'
   }
 }
 

@@ -814,7 +814,7 @@ export default function PlanificadorPage() {
           </div>
           {/* Botones de N8N */}
           <div className="flex items-center justify-between">
-          {/* Botón para crear temática */}
+          {/* Button to create theme */}
            <button
             onClick={() => setShowModal(true)}
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -828,9 +828,9 @@ export default function PlanificadorPage() {
 
         {/* Controles del planificador */}
         <div className="mb-6">
-          {/* Estadísticas rápidas del planificador */}
+          {/* Quick planner statistics */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Tarjeta de Temáticas Activas - Colapsable */}
+          {/* Active Themes Card - Collapsible */}
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg shadow-lg overflow-hidden">
             {/* Header clickeable */}
             <button onClick={() => setShowThemesList(!showThemesList)}
@@ -845,7 +845,7 @@ export default function PlanificadorPage() {
               <div className="flex items-center gap-2">
                 <div className="text-blue-200 text-2xl">🎯</div>
 
-                {/* Mensaje cuando no hay temáticas */}
+                {/* Message when no themes */}
                 {themes.length > 0 && (
                 <span className="text-blue-200 text-xl transition-transform duration-200" style={{ transform: showThemesList ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                   ▼
@@ -854,7 +854,7 @@ export default function PlanificadorPage() {
               </div>
             </button>
 
-            {/* Lista de temáticas (expandible) */}
+            {/* Themes list (expandable) */}
             {showThemesList && themes.length > 0 && (
               <div className="px-2 pb-3 space-y-2 max-h-[500px] overflow-y-auto">
                 {themes.map((theme) => {
@@ -865,12 +865,12 @@ export default function PlanificadorPage() {
                       key={theme.id}
                       className="bg-white/10 backdrop-blur-sm rounded-lg p-2 border border-white/20 hover:bg-white/20 transition-colors"
                     >
-                      {/* Nombre de la temática */}
+                      {/* Theme name */}
                       <h3 className="text-white font-semibold text-sm mb-2 line-clamp-1">
                         {theme.themeName}
                       </h3>
 
-                      {/* Fechas */}
+                      {/* Dates */}
                       <div className="flex items-center gap-2 text-xs text-blue-100 mb-2">
                         <span>📅</span>
                         <span>
@@ -879,7 +879,7 @@ export default function PlanificadorPage() {
                         </span>
                       </div>
 
-                      {/* Botones de acción */}
+                      {/* Action buttons */}
                       <div className="flex gap-2 pt-2 border-t border-white/20">
                         <button
                           onClick={(e) => {
@@ -942,7 +942,7 @@ export default function PlanificadorPage() {
           </div>
         </div>
 
-        {/* Estado de sincronización N8N */}
+        {/* N8N sync status */}
         {syncStatus && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center">
@@ -952,7 +952,7 @@ export default function PlanificadorPage() {
           </div>
         )}
 
-        {/* Mensaje cuando no hay eventos */}
+        {/* Message when no events */}
         {events.length === 0 && themes.length === 0 && (
           <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
             <div className="flex items-start">
@@ -1786,7 +1786,7 @@ export default function PlanificadorPage() {
           >
             <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
               <span>💡</span>
-              <span>Cómo usar el Planificador</span>
+              <span>How to use the Planner</span>
             </h3>
             <span className="text-blue-600 text-xl transition-transform duration-200" style={{ transform: showHelpCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}>
               ▼
@@ -1821,7 +1821,7 @@ export default function PlanificadorPage() {
                 </div>
 
                 <p className="text-gray-600 mb-4">
-                  ¿Estás seguro de que deseas eliminar la temática <strong>&quot;{themeToDelete?.themeName}&quot;</strong>?
+                  Are you sure you want to delete the theme <strong>&quot;{themeToDelete?.themeName}&quot;</strong>?
                 </p>
 
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">

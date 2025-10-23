@@ -120,14 +120,14 @@ export const useThemes = () => {
     try {
       const response = await fetch('/api/planificador/themes')
       console.log('🔄 useThemes: Response status:', response.status)
-      if (!response.ok) throw new Error('Error al cargar temáticas')
+      if (!response.ok) throw new Error('Error loading themes')
       const data = await response.json()
       console.log('🔄 useThemes: Datos recibidos:', data)
       setThemes(data)
       console.log('🔄 useThemes: Temáticas establecidas:', data.length)
     } catch (err) {
       console.error('❌ useThemes: Error:', err)
-      setError(err instanceof Error ? err.message : 'Error desconocido')
+      setError(err instanceof Error ? err.message : 'Unknown error')
     } finally {
       setLoading(false)
     }
@@ -142,12 +142,12 @@ export const useThemes = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(themeData)
       })
-      if (!response.ok) throw new Error('Error al crear temática')
+      if (!response.ok) throw new Error('Error creating theme')
       const newTheme = await response.json()
       setThemes(prev => [...prev, newTheme])
       return newTheme
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido')
+      setError(err instanceof Error ? err.message : 'Unknown error')
       throw err
     } finally {
       setLoading(false)
@@ -163,14 +163,14 @@ export const useThemes = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(themeData)
       })
-      if (!response.ok) throw new Error('Error al actualizar temática')
+      if (!response.ok) throw new Error('Error updating theme')
       const updatedTheme = await response.json()
       setThemes(prev => prev.map(theme =>
         theme.id === id ? updatedTheme : theme
       ))
       return updatedTheme
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido')
+      setError(err instanceof Error ? err.message : 'Unknown error')
       throw err
     } finally {
       setLoading(false)
@@ -184,10 +184,10 @@ export const useThemes = () => {
       const response = await fetch(`/api/planificador/themes?id=${id}`, {
         method: 'DELETE'
       })
-      if (!response.ok) throw new Error('Error al eliminar temática')
+      if (!response.ok) throw new Error('Error deleting theme')
       setThemes(prev => prev.filter(theme => theme.id !== id))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido')
+      setError(err instanceof Error ? err.message : 'Unknown error')
       throw err
     } finally {
       setLoading(false)
@@ -202,17 +202,17 @@ export const useThemes = () => {
 
     // Validar que las fechas sean válidas
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-      return { valid: false, message: 'Fechas inválidas' }
+      return { valid: false, message: 'Invalid dates' }
     }
 
     // Validar que la fecha de inicio no sea en el pasado
     if (start < today) {
-      return { valid: false, message: 'La fecha de inicio no puede ser en el pasado' }
+      return { valid: false, message: 'Start date cannot be in the past' }
     }
 
     // Validar que la fecha de fin sea posterior a la de inicio
     if (end <= start) {
-      return { valid: false, message: 'La fecha de fin debe ser posterior a la de inicio' }
+      return { valid: false, message: 'End date must be after start date' }
     }
 
     // Calcular diferencia en días
@@ -221,11 +221,11 @@ export const useThemes = () => {
 
     // Validar rango mínimo (1 semana) y máximo (3 meses)
     if (diffDays < 7) {
-      return { valid: false, message: 'El rango mínimo es de 1 semana' }
+      return { valid: false, message: 'Minimum range is 1 week' }
     }
 
     if (diffDays > 90) {
-      return { valid: false, message: 'El rango máximo es de 3 meses' }
+      return { valid: false, message: 'Maximum range is 3 months' }
     }
 
     return { valid: true }
@@ -376,7 +376,7 @@ export const useThemes = () => {
 
       distribution.push({
         date: currentDate.toISOString().split('T')[0],
-        day: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][i],
+        day: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][i],
         ...dayContent,
         themeName
       })

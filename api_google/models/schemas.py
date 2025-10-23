@@ -2,7 +2,7 @@
 Esquemas Pydantic para la API
 """
 from pydantic import BaseModel, Field, validator, root_validator, model_validator
-from typing import Optional, Literal, List, Dict, Any
+from typing import Optional, Literal, List, Dict, Any, ClassVar
 from datetime import datetime
 
 class VideoGenerationRequest(BaseModel):
@@ -98,6 +98,93 @@ class ImageGenerationResponse(BaseModel):
     """Response para generación de imagen - Estructura compatible con Gemini API"""
     candidates: Optional[list] = Field(None, description="Candidatos de respuesta de Gemini")
     usageMetadata: Optional[dict] = Field(None, description="Metadatos de uso de tokens")
+
+# ===== VEO 3.1 SCHEMAS =====
+
+class Veo31VideoRequest(BaseModel):
+    """Request para generación de video VEO 3.1 - Basado en documentación oficial"""
+    prompt: str = Field(..., description="Descripción del video a generar", max_length=1024)
+    aspect_ratio: Literal["16:9", "9:16", "1:1"] = Field(default="16:9", description="Relación de aspecto del video")
+    resolution: Literal["720p", "1080p"] = Field(default="720p", description="Resolución del video")
+    duration_seconds: Literal[4, 6, 8] = Field(default=8, description="Duración del video en segundos")
+    veo_model: Literal["veo-3.1-generate-preview", "veo-3.1-fast-generate-preview"] = Field(
+        default="veo-3.1-generate-preview",
+        description="Modelo Veo 3.1 a utilizar"
+    )
+    negative_prompt: Optional[str] = Field(None, description="Elementos a evitar en el video", max_length=500)
+    person_generation: bool = Field(default=False, description="Permitir generación de personas")
+    style_preset: Optional[str] = Field(None, description="Estilo predefinido (cinematic, documentary, etc.)")
+
+class Veo31FrameTransitionRequest(BaseModel):
+    """Request para transición de frames VEO 3.1 - Basado en documentación oficial"""
+    prompt: str = Field(..., description="Descripción de la transición", max_length=1024)
+    start_frame_base64: str = Field(..., description="Frame inicial en base64")
+    end_frame_base64: str = Field(..., description="Frame final en base64")
+    aspect_ratio: Literal["16:9", "9:16", "1:1"] = Field(default="16:9", description="Relación de aspecto")
+    resolution: Literal["720p", "1080p"] = Field(default="720p", description="Resolución del video")
+    duration_seconds: Literal[4, 6, 8] = Field(default=8, description="Duración de la transición")
+    transition_style: Literal["smooth", "dramatic", "fade", "morph"] = Field(
+        default="smooth",
+        description="Estilo de transición"
+    )
+    veo_model: Literal["veo-3.1-generate-preview", "veo-3.1-fast-generate-preview"] = Field(
+        default="veo-3.1-generate-preview",
+        description="Modelo Veo 3.1 a utilizar"
+    )
+    negative_prompt: Optional[str] = Field(None, description="Elementos a evitar", max_length=500)
+
+class Veo31VideoExtensionRequest(BaseModel):
+    """Request para extensión de video VEO 3.1 - Basado en documentación oficial"""
+    prompt: str = Field(..., description="Descripción de la extensión", max_length=1024)
+    original_video_url: str = Field(..., description="URL del video original a extender")
+    extension_duration: Literal[4, 6, 8] = Field(default=8, description="Duración de la extensión")
+    veo_model: Literal["veo-3.1-generate-preview", "veo-3.1-fast-generate-preview"] = Field(
+        default="veo-3.1-generate-preview",
+        description="Modelo Veo 3.1 a utilizar"
+    )
+    negative_prompt: Optional[str] = Field(None, description="Elementos a evitar", max_length=500)
+
+class Veo31Response(BaseModel):
+    """Response para operaciones VEO 3.1 - Basado en documentación oficial"""
+    operation_id: str = Field(..., description="ID de la operación")
+    status: Literal["pending", "processing", "completed", "failed"] = Field(..., description="Estado de la operación")
+    message: str = Field(..., description="Mensaje descriptivo")
+    veo_model: str = Field(..., description="Modelo VEO 3.1 utilizado")
+    estimated_completion_time: Optional[int] = Field(None, description="Tiempo estimado de finalización en segundos")
+    # Campos específicos de Veo 3.1
+    resolution: Optional[str] = Field(None, description="Resolución del video generado")
+    duration: Optional[float] = Field(None, description="Duración del video en segundos")
+    has_audio: bool = Field(default=True, description="Si el video incluye audio nativo")
+    frame_rate: int = Field(default=24, description="Frame rate del video")
+
+class Veo31StatusResponse(BaseModel):
+    """Response para estado de operación VEO 3.1"""
+    operation_id: str = Field(..., description="ID de la operación")
+    status: str = Field(..., description="Estado de la operación")
+    prompt: str = Field(..., description="Prompt utilizado")
+    type: str = Field(..., description="Tipo de operación (video o frame-transition)")
+    veo_model: str = Field(..., description="Modelo VEO 3.1 utilizado")
+    created_at: float = Field(..., description="Timestamp de creación")
+    completed_at: Optional[float] = Field(None, description="Timestamp de finalización")
+    video_url: Optional[str] = Field(None, description="URL del video generado")
+    filename: Optional[str] = Field(None, description="Nombre del archivo")
+    error_message: Optional[str] = Field(None, description="Mensaje de error si aplica")
+    progress_percentage: Optional[int] = Field(None, description="Porcentaje de progreso (0-100)")
+
+class Veo31Error(BaseModel):
+    """Error response para VEO 3.1"""
+    error_code: str = Field(..., description="Código de error")
+    error_message: str = Field(..., description="Mensaje de error")
+    operation_id: Optional[str] = Field(None, description="ID de la operación que falló")
+    timestamp: float = Field(..., description="Timestamp del error")
+
+class Veo31Status(BaseModel):
+    """Estados posibles para operaciones VEO 3.1"""
+    QUEUED: ClassVar[str] = "queued"
+    PROCESSING: ClassVar[str] = "processing"
+    COMPLETED: ClassVar[str] = "completed"
+    FAILED: ClassVar[str] = "failed"
+    CANCELLED: ClassVar[str] = "cancelled"
     # Campos adicionales para compatibilidad
     status: Optional[str] = Field(default="success", description="Estado de la operación")
     generated_image_url: Optional[str] = Field(None, description="URL de la imagen generada")

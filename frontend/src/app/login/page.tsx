@@ -35,7 +35,7 @@ function LoginForm() {
       })
 
       if (result?.error) {
-        setError('Credenciales inválidas')
+        setError('Invalid credentials')
       } else {
         // Verificar que la sesión se creó correctamente
         const session = await getSession()
@@ -64,7 +64,7 @@ function LoginForm() {
         }
       }
     } catch (err) {
-      setError('Error al iniciar sesión')
+      setError('Error signing in')
     } finally {
       setIsLoading(false)
     }
@@ -78,7 +78,7 @@ function LoginForm() {
             🎨 ContentFlow
           </h1>
           <p className="text-gray-300 mb-8">
-            Inicia sesión para crear contenido increíble
+           Sign in to create amazing content
           </p>
         </div>
 
@@ -106,7 +106,7 @@ function LoginForm() {
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-              Contraseña
+              Password
             </label>
             <input
               id="password"
@@ -114,7 +114,7 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Tu contraseña"
+              placeholder="Your password"
               required
             />
           </div>
@@ -130,15 +130,15 @@ function LoginForm() {
             disabled={isLoading}
             className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
-            {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            {isLoading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
         <div className="text-center">
           <p className="text-gray-400 text-sm">
-            ¿No tienes cuenta?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register" className="text-blue-400 hover:text-blue-300">
-              Regístrate aquí
+              Register here
             </Link>
           </p>
         </div>
@@ -149,7 +149,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div>Cargando...</div>}>
+    <Suspense fallback={<div>Loading...</div>}>
       <LoginForm />
     </Suspense>
   )

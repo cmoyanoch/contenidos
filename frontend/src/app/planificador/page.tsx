@@ -5,6 +5,7 @@ import {
   Eye
 } from 'lucide-react';
 import moment from 'moment';
+import { useSession } from 'next-auth/react';
 import React, { useState } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -62,6 +63,8 @@ export default function PlanificadorPage() {
   const [showContentStatus, setShowContentStatus] = useState(false)
   const [currentDayContent, setCurrentDayContent] = useState<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [loadingContent, setLoadingContent] = useState(false)
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentView, setCurrentView] = useState('month')
   const [themeForm, setThemeForm] = useState({
     themeName: '',
     themeDescription: '',
@@ -73,6 +76,10 @@ export default function PlanificadorPage() {
   const [themeToDelete, setThemeToDelete] = useState<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
   const [showEditModal, setShowEditModal] = useState(false)
   const [themeToEdit, setThemeToEdit] = useState<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
+
+  // Obtener sesión y role del usuario
+  const { data: session } = useSession()
+  const userRole = (session?.user as any)?.role || 'user'
   const [showThemesList, setShowThemesList] = useState(false) // Controla el colapso de la lista de temáticas
   const [isGenerating, setIsGenerating] = useState(false) // Estado de carga para generación de contenido
 
@@ -660,6 +667,13 @@ export default function PlanificadorPage() {
   const CustomDateCell = ({ children, value, events, handleSelectEvent, ...props }: { children: any, value: Date, events: any[], handleSelectEvent: (event: any) => void, [key: string]: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const isWeekendDay = isWeekend(value)
 
+    // Detectar si el día está fuera del mes actual
+    const currentMonth = currentDate.getMonth()
+    const currentYear = currentDate.getFullYear()
+    const cellMonth = value.getMonth()
+    const cellYear = value.getFullYear()
+    const isOffRange = cellMonth !== currentMonth || cellYear !== currentYear
+
     // Buscar si este día tiene eventos y obtener su temática
     const dateString = value.toISOString().split('T')[0]
     const dayEvents = events.filter(event => {
@@ -679,24 +693,33 @@ export default function PlanificadorPage() {
 
     console.log(`🎯 CustomDateCell ${dateString} - hasTheme:`, hasTheme)
 
-    // Si hay eventos, obtener el color de la temática
-    const backgroundColor = isWeekendDay ? '#F8FAFC' : 'transparent'
-    const borderLeft = '2px solid transparent'
-    const borderRight = '1px solid #E5E7EB' // Borde por defecto para días sin temática
-    let themeColor = '#3B82F6' // Color por defecto
+    // Prioridad de color de fondo: Otro mes > Temática (si no es otro mes) > Fin de semana (si no es otro mes) > Normal
+    let finalBackgroundColor = 'transparent'
+    let currentThemeColor = '#3B82F6' // Default theme color
 
     if (hasTheme) {
       const theme = dayEvents[0].resource.theme
-      themeColor = getThemeColor(theme.themeName)
-
+      currentThemeColor = getThemeColor(theme.themeName)
     }
+
+    if (isOffRange) {
+      finalBackgroundColor = '#E5E7EB' // Color para días de otro mes (prioridad máxima)
+    } else if (hasTheme) {
+      finalBackgroundColor = `${currentThemeColor}60` // Darker theme color for themed days
+    } else if (isWeekendDay && !isOffRange) {
+      finalBackgroundColor = '#F8FAFC' // Color para días de fin de semana del mes actual
+    }
+
+    const borderLeft = '2px solid transparent'
+    const borderRight = '1px solid #E5E7EB' // Borde por defecto para días sin temática
 
     return (
       <div
         {...props}
-        className={`rbc-date-cell custom-date-cell ${isWeekendDay ? 'weekend-cell' : ''} ${hasTheme ? 'rbc-themed-cell' : ''}`}
+        className={`rbc-date-cell custom-date-cell ${isWeekendDay && !isOffRange ? 'weekend-cell' : ''} ${hasTheme ? 'rbc-themed-cell' : ''} ${isOffRange ? 'rbc-off-range' : ''}`}
         style={{
-          backgroundColor: hasTheme ? `${themeColor}15` : backgroundColor,
+          backgroundColor: finalBackgroundColor,
+          color: hasTheme && !isOffRange ? '#1f2937' : undefined, // Color más oscuro para números de días con temática
           transition: 'all 0.2s ease',
           cursor: hasTheme ? 'pointer' : 'default'
         }}
@@ -992,13 +1015,70 @@ export default function PlanificadorPage() {
         <div className="bg-white rounded-lg shadow-lg p-6">
         <style dangerouslySetInnerHTML={{
           __html: `
-            /* Estilos para días de fin de semana en React Big Calendar */
+            /* Estilos para días fuera del mes actual - más oscuros para diferenciación */
             .rbc-month-view .rbc-date-cell.rbc-off-range-bg {
-              background-color: #F8FAFC !important;
+              background-color: #E5E7EB !important;
+              color: #9CA3AF !important;
             }
 
             .rbc-month-view .rbc-date-cell.rbc-today.rbc-off-range-bg {
-              background-color: #E2E8F0 !important;
+              background-color: #D1D5DB !important;
+              color: #6B7280 !important;
+            }
+
+            /* Estilos adicionales con mayor especificidad */
+            .rbc-month-view .rbc-date-cell.rbc-off-range {
+              background-color: #E5E7EB !important;
+              color: #9CA3AF !important;
+            }
+
+            .rbc-month-view .rbc-date-cell.rbc-off-range .rbc-date {
+              color: #9CA3AF !important;
+            }
+
+            /* Forzar estilos para días fuera de rango */
+            .rbc-month-view .rbc-date-cell[class*="rbc-off-range"] {
+              background-color: #E5E7EB !important;
+              color: #9CA3AF !important;
+            }
+
+            /* Estilos más específicos para días fuera de rango */
+            .rbc-month-view .rbc-date-cell.rbc-off-range-bg,
+            .rbc-month-view .rbc-date-cell.rbc-off-range,
+            .rbc-month-view .rbc-date-cell.rbc-off-range-bg .rbc-date,
+            .rbc-month-view .rbc-date-cell.rbc-off-range .rbc-date {
+              background-color: #E5E7EB !important;
+              color: #9CA3AF !important;
+            }
+
+            /* Estilos para el contenedor del calendario */
+            .rbc-month-view .rbc-date-cell {
+              position: relative;
+              color: #000000c7;
+            }
+
+            /* Forzar estilos con máxima especificidad */
+            div.rbc-month-view div.rbc-date-cell.rbc-off-range-bg,
+            div.rbc-month-view div.rbc-date-cell.rbc-off-range {
+              background-color: #E5E7EB !important;
+              color: #9CA3AF !important;
+            }
+
+            /* Estilos para títulos del calendario */
+            .rbc-toolbar-label {
+              color: #373a3c !important;
+              font-weight: 600 !important;
+            }
+
+            .rbc-header {
+              color: #373a3c !important;
+              font-weight: 500 !important;
+            }
+
+            /* Estilos para el botón del número del día con temática */
+            .rbc-themed-cell .rbc-button-link {
+              color: #1f2937 !important;
+              font-weight: 600 !important;
             }
 
             /* Mejorar visualización de celdas con temática - SOLO nuestras celdas personalizadas */
@@ -1134,8 +1214,45 @@ export default function PlanificadorPage() {
           endAccessor="end"
           style={{ height: 600 }}
           views={['month', 'week', 'day']}
-          defaultView="month"
+          view={currentView}
+          date={currentDate}
           components={{
+            toolbar: (props: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+              const handleNavigate = (action: string) => {
+                if (props.onNavigate) {
+                  props.onNavigate(action);
+                }
+              };
+
+              return (
+                <div className="rbc-toolbar">
+                  <span className="rbc-btn-group">
+                    <button
+                      type="button"
+                      className="rbc-btn rbc-btn-today"
+                      onClick={() => handleNavigate('TODAY')}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      className="rbc-btn rbc-btn-prev"
+                      onClick={() => handleNavigate('PREV')}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      className="rbc-btn rbc-btn-next"
+                      onClick={() => handleNavigate('NEXT')}
+                    >
+                      Next
+                    </button>
+                  </span>
+                  <span className="rbc-toolbar-label">{props.label}</span>
+                </div>
+              );
+            },
             event: EventComponent,
             dateCellWrapper: (props: any) => ( // eslint-disable-line @typescript-eslint/no-explicit-any
               <CustomDateCell
@@ -1153,11 +1270,11 @@ export default function PlanificadorPage() {
           showMultiDayTimes={false}
           onNavigate={(newDate: Date) => {
             console.log('📅 Navegación del calendario:', newDate)
-            // El calendario maneja automáticamente la navegación
+            setCurrentDate(newDate)
           }}
           onView={(newView: string) => {
             console.log('📅 Cambio de vista:', newView)
-            // El calendario maneja automáticamente el cambio de vista
+            setCurrentView(newView)
           }}
           messages={{
             next: 'Next',
@@ -1555,6 +1672,7 @@ export default function PlanificadorPage() {
         })()}
 
         {/* Información sobre diferenciación de días y colores por temática */}
+        {userRole !== 'user' && (
         <div className="mt-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-2">
           <div
             className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
@@ -1629,8 +1747,10 @@ export default function PlanificadorPage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Tabla de Estrategia de Redes Sociales */}
+        {userRole !== 'user' && (
         <div className="mt-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-2">
           <div
             className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
@@ -1777,8 +1897,10 @@ export default function PlanificadorPage() {
             </p>
           </div>
         </div>
+        )}
 
         {/* Información adicional - Colapsable */}
+        {userRole !== 'user' && (
         <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg overflow-hidden">
           <button
             onClick={() => setShowHelpCollapsed(!showHelpCollapsed)}
@@ -1805,6 +1927,7 @@ export default function PlanificadorPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Modal de confirmación de eliminación */}
         {showDeleteConfirm && (

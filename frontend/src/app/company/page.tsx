@@ -578,7 +578,7 @@ export default function CompanyPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nombre *
+                    Full name *
                   </label>
                   <input
                     type="text"
@@ -591,7 +591,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cargo *
+                    Position *
                   </label>
                   <input
                     type="text"
@@ -604,7 +604,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Foto del Empleado *
+                    Employee Photo *
                   </label>
                   <input
                     type="file"
@@ -614,7 +614,7 @@ export default function CompanyPage() {
                     required
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Esta foto será procesada para generar versiones realistic y avatar
+                    This photo will be processed to generate realistic and avatar versions
                   </p>
                 </div>
               </div>
@@ -631,7 +631,7 @@ export default function CompanyPage() {
                   disabled={loading}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
-                  {loading ? 'Creating...' : 'Create Staff'}
+                  {loading ? 'Creating staff...' : 'Create Staff'}
                 </button>
               </div>
             </form>
@@ -650,7 +650,7 @@ export default function CompanyPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Company Name
+                    Company Name *
                   </label>
                   <input
                     type="text"
@@ -662,7 +662,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Slogan
+                    Slogan *
                   </label>
                   <input
                     type="text"
@@ -673,7 +673,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Industry
+                    Industry *
                   </label>
                   <input
                     type="text"
@@ -684,7 +684,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number
+                    Phone Number *
                   </label>
                   <input
                     type="text"
@@ -695,7 +695,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email
+                    Email *
                   </label>
                   <input
                     type="email"
@@ -706,7 +706,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Website
+                    Website *
                   </label>
                   <input
                     type="url"
@@ -717,7 +717,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Primary Color
+                    Primary Color *
                   </label>
                   <input
                     type="color"
@@ -728,7 +728,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Secondary Color
+                    Secondary Color *
                   </label>
                   <input
                     type="color"
@@ -739,7 +739,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Accent Color
+                    Accent Color *
                   </label>
                   <input
                     type="color"
@@ -750,7 +750,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Brand Style
+                    Brand Style *
                   </label>
                   <select
                     value={brandingForm.brand_style}
@@ -765,7 +765,7 @@ export default function CompanyPage() {
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Default CTA
+                    Default CTA *
                   </label>
                   <textarea
                     value={brandingForm.default_cta}
@@ -776,7 +776,7 @@ export default function CompanyPage() {
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Brand Voice
+                    Brand Voice *
                   </label>
                   <textarea
                     value={brandingForm.brand_voice}
@@ -787,14 +787,14 @@ export default function CompanyPage() {
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Hashtags (separated by commas)
+                    Hashtags (separated by commas) * (min 3, max 10)
                   </label>
                   <input
                     type="text"
                     value={brandingForm.hashtags}
                     onChange={(e) => setBrandingForm({ ...brandingForm, hashtags: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-                    placeholder="#Seguros #Finanzas #Protección"
+                    placeholder="#Insurance #Finance #Protection"
                   />
                 </div>
 
@@ -804,7 +804,7 @@ export default function CompanyPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Street Address
+                    Street Address *
                   </label>
                   <input
                     type="text"
@@ -949,7 +949,7 @@ export default function CompanyPage() {
 
                 {/* 🌐 SECCIÓN REDES SOCIALES */}
                 <div className="md:col-span-2">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">🌐 Social Media</h4>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">🌐 Social Media URLs</h4>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -693,7 +693,7 @@ export default function PlanificadorPage() {
 
     console.log(`🎯 CustomDateCell ${dateString} - hasTheme:`, hasTheme)
 
-    // Prioridad de color de fondo: Otro mes > Temática (si no es otro mes) > Fin de semana (si no es otro mes) > Normal
+    // Prioridad de color de fondo: Temática (siempre) > Otro mes (sin temática) > Fin de semana (sin temática) > Normal
     let finalBackgroundColor = 'transparent'
     let currentThemeColor = '#3B82F6' // Default theme color
 
@@ -702,10 +702,10 @@ export default function PlanificadorPage() {
       currentThemeColor = getThemeColor(theme.themeName)
     }
 
-    if (isOffRange) {
-      finalBackgroundColor = '#E5E7EB' // Color para días de otro mes (prioridad máxima)
-    } else if (hasTheme) {
-      finalBackgroundColor = `${currentThemeColor}60` // Darker theme color for themed days
+    if (hasTheme) {
+      finalBackgroundColor = `${currentThemeColor}60` // Color de temática (prioridad máxima - siempre)
+    } else if (isOffRange) {
+      finalBackgroundColor = '#E5E7EB' // Color para días de otro mes (sin temática)
     } else if (isWeekendDay && !isOffRange) {
       finalBackgroundColor = '#F8FAFC' // Color para días de fin de semana del mes actual
     }

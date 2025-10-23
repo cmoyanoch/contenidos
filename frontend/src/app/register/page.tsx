@@ -29,13 +29,13 @@ export default function RegisterPage() {
 
     // Validaciones
     if (formData.password !== formData.confirmPassword) {
-      setError('Las contraseñas no coinciden')
+      setError('Passwords do not match')
       setIsLoading(false)
       return
     }
 
     if (formData.password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
+      setError('Password must be at least 6 characters')
       setIsLoading(false)
       return
     }
@@ -56,13 +56,13 @@ export default function RegisterPage() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Error al registrar usuario')
+        throw new Error(data.error || 'Error registering user')
       }
 
       // Redirigir al login
-      router.push('/login?message=Usuario registrado correctamente')
+      router.push('/login?message=User registered successfully')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al registrar usuario')
+      setError(err instanceof Error ? err.message : 'Error registering user')
     } finally {
       setIsLoading(false)
     }
@@ -76,14 +76,14 @@ export default function RegisterPage() {
             🎨 ContentFlow
           </h1>
           <p className="text-gray-300 mb-8">
-            Crea tu cuenta para generar contenido increíble
+            Create your account to start generating content with AI
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
-              Nombre completo
+              Full name
             </label>
             <input
               id="name"
@@ -92,7 +92,7 @@ export default function RegisterPage() {
               value={formData.name}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Tu nombre completo"
+              placeholder="Your full name"
               required
             />
           </div>
@@ -108,14 +108,14 @@ export default function RegisterPage() {
               value={formData.email}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="tu@email.com"
+              placeholder="your@email.com"
               required
             />
           </div>
 
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-              Contraseña
+              Password
             </label>
             <input
               id="password"
@@ -124,14 +124,14 @@ export default function RegisterPage() {
               value={formData.password}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Mínimo 6 caracteres"
+              placeholder="Minimum 6 characters"
               required
             />
           </div>
 
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
-              Confirmar contraseña
+              Confirm password
             </label>
             <input
               id="confirmPassword"
@@ -140,7 +140,7 @@ export default function RegisterPage() {
               value={formData.confirmPassword}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Repite tu contraseña"
+              placeholder="Repeat your password"
               required
             />
           </div>
@@ -156,15 +156,15 @@ export default function RegisterPage() {
             disabled={isLoading}
             className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
-            {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+            {isLoading ? 'Creating account...' : 'Create Account'}
           </button>
         </form>
 
         <div className="text-center">
           <p className="text-gray-400 text-sm">
-            ¿Ya tienes cuenta?{' '}
+            Already have an account?{' '}
             <Link href="/login" className="text-blue-400 hover:text-blue-300">
-              Inicia sesión
+              Sign in
             </Link>
           </p>
         </div>

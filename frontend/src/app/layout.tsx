@@ -7,8 +7,8 @@ import { SessionProvider } from './providers/session-provider';
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ContentFlow - Crea Videos e Imágenes con IA',
-  description: 'Genera contenido increíble con inteligencia artificial. Crea videos, modifica imágenes y automatiza tu flujo de trabajo creativo.',
+  title: 'ContentFlow - Create Videos and Images with AI',
+  description: 'Generate amazing content with artificial intelligence. Create videos, modify images and automate your creative workflow.',
 }
 
 export default function RootLayout({
@@ -17,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es">
+    <html lang="en">
       <body className={inter.className}>
         <SessionProvider>
           <Navbar />

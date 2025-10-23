@@ -194,7 +194,7 @@ export default function FormatsPage() {
       })
 
       // ✅ Mostrar mensaje de error al usuario
-      alert(`Error al cargar formatos: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+      alert(`Error loading formats: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setLoading(false)
     }
@@ -203,12 +203,12 @@ export default function FormatsPage() {
   const handleCaptureSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!captureForm.file) {
-      alert('Por favor selecciona un archivo')
+      alert('Please select a file')
       return
     }
 
     if (!captureForm.content_type) {
-      alert('Por favor selecciona el tipo de contenido')
+      alert('Please select the content type')
       return
     }
 
@@ -245,7 +245,7 @@ export default function FormatsPage() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.message || 'Error capturando formato')
+        throw new Error(errorData.message || 'Error capturing format')
       }
 
       const result = await response.json()
@@ -266,11 +266,11 @@ export default function FormatsPage() {
         })
         loadFormats()
       } else {
-        throw new Error(result.message || 'Error capturando formato')
+        throw new Error(result.message || 'Error capturing format')
       }
     } catch (error) {
-      console.error('Error capturando formato:', error)
-      alert('❌ Error capturando formato: ' + (error as Error).message)
+      console.error('Error capturing format:', error)
+      alert('❌ Error capturing format: ' + (error as Error).message)
     } finally {
       setCapturing(false)
       setCaptureProgress(0)
@@ -278,7 +278,7 @@ export default function FormatsPage() {
   }
 
   const handleDelete = async (formatId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este formato?')) {
+    if (!confirm('Are you sure you want to delete this format?')) {
       return
     }
 
@@ -294,13 +294,13 @@ export default function FormatsPage() {
       const result = await response.json()
 
       if (result.success) {
-        alert('✅ Formato eliminado exitosamente')
+        alert('✅ Format deleted successfully')
         loadFormats()
       } else {
-        alert('❌ Error eliminando formato')
+        alert('❌ Error deleting format')
       }
     } catch (err) {
-      alert('❌ Error eliminando formato')
+      alert('❌ Error deleting format')
       console.error(err)
     }
   }
@@ -320,7 +320,7 @@ export default function FormatsPage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 pt-20 pb-8 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando formatos...</p>
+          <p className="text-gray-600">Loading formats...</p>
         </div>
       </div>
     )
@@ -394,7 +394,7 @@ export default function FormatsPage() {
             </div>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-sm text-gray-600">Categorías</div>
+            <div className="text-sm text-gray-600">Categories</div>
             <div className="text-2xl font-bold text-blue-600">
               {new Set(currentFormats.map(f => f.category)).size}
             </div>
@@ -415,7 +415,7 @@ export default function FormatsPage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"
-                  placeholder="Buscar formatos..."
+                  placeholder="Search formats..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -428,7 +428,7 @@ export default function FormatsPage() {
                 onChange={(e) => setCategoryFilter(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-600"
               >
-                <option value="all">Todas las categorías</option>
+                <option value="all">All categories</option>
                 {Array.from(new Set(currentFormats.map(f => f.category))).map(category => (
                   <option key={category} value={category}>{category}</option>
                 ))}
@@ -439,7 +439,7 @@ export default function FormatsPage() {
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors"
             >
               <Upload className="w-5 h-5" />
-              Capturar Nuevo Formato
+              Capture New Format
             </button>
           </div>
         </div>
@@ -473,7 +473,7 @@ export default function FormatsPage() {
                     <button
                       onClick={() => handleDelete(format.id)}
                       className="text-white hover:text-red-300 transition-colors"
-                      title="Eliminar"
+                      title="Delete"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>

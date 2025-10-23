@@ -364,13 +364,13 @@ export default function CompanyPage() {
     }
   }, [branding])
 
-  // ✅ Mostrar loading mientras se hidrata
+  // ✅ Show loading while hydrating
   if (!isHydrated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 pt-20 pb-8 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Cargando...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     )
@@ -479,7 +479,7 @@ export default function CompanyPage() {
                         <button
                           onClick={() => handleDeleteStaff(employee.id, employee.name)}
                           className="p-3 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Eliminar staff"
+                          title="Delete staff"
                           disabled={loading}
                         >
                           {loading ? (
@@ -1034,7 +1034,7 @@ export default function CompanyPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
                     />
                     <p className="text-xs text-gray-500">
-                      Sube un icono para tu empresa (PNG, JPG, GIF - máximo 5MB)
+                      Upload an icon for your company (PNG, JPG, GIF - max 5MB)
                     </p>
                   </div>
                 </div>

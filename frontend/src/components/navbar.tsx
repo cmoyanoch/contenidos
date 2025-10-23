@@ -69,14 +69,14 @@ function Navbar() {
   // Definir menús con control de acceso por rol
   const menuItems: MenuItem[] = [
     { href: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['admin'] },
-    { href: '/generar-video', label: 'Generar Video', icon: '🎬', roles: ['admin'] },
-    { href: '/generar-contenido', label: 'Generar Contenido', icon: '📝', roles: ['admin'] },
-    { href: '/planificador', label: 'Planificador', icon: '🎯', roles: ['admin', 'user'] },
-    { href: '/formatos', label: 'Formatos', icon: '📹', roles: ['admin', 'user'] },
+    { href: '/generar-video', label: 'Generate Video', icon: '🎬', roles: ['admin'] },
+    { href: '/generar-contenido', label: 'Generate Content', icon: '📝', roles: ['admin'] },
+    { href: '/planificador', label: 'Planner', icon: '🎯', roles: ['admin', 'user'] },
+    { href: '/formatos', label: 'Formats', icon: '📹', roles: ['admin', 'user'] },
     { href: '/company', label: 'Company', icon: '🏢', roles: ['admin', 'user'] },
     { href: '/admin', label: 'Admin', icon: '🔧', roles: ['admin'] },
     { href: '/admin/users', label: 'Users', icon: '👥', roles: ['admin'] },
-    { href: '/agendador', label: 'Agendador', icon: '📅', roles: ['admin'] },
+    { href: '/agendador', label: 'Scheduler', icon: '📅', roles: ['admin'] },
     { href: '/campaigns', label: 'Campaigns', icon: '🎯', roles: ['admin'] }
   ]
 
@@ -112,17 +112,17 @@ function Navbar() {
           {/* User Menu - Desktop */}
           <div className="hidden md:flex md:items-center md:space-x-4">
             {status === 'loading' ? (
-              <div className="text-gray-300">Cargando...</div>
+              <div className="text-gray-300">Loading...</div>
             ) : session ? (
               <div className="flex items-center space-x-3">
                 <span className="text-gray-300 text-sm">
-                  Hola, {session.user?.name || session.user?.email}
+                  Hello, {session.user?.name || session.user?.email}
                 </span>
                 <button
                   onClick={handleSignOut}
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
                 >
-                  Cerrar Sesión
+                  Sign Out
                 </button>
               </div>
             ) : (
@@ -130,7 +130,7 @@ function Navbar() {
                 href="/login"
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
               >
-                Iniciar Sesión
+                Sign In
               </Link>
             )}
           </div>
@@ -196,7 +196,7 @@ function Navbar() {
                       }}
                       className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-300 hover:text-red-200 hover:bg-red-600"
                     >
-                      Cerrar Sesión
+                      Sign Out
                     </button>
                   </div>
                 ) : (
@@ -205,7 +205,7 @@ function Navbar() {
                     className="block px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-blue-700"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Iniciar Sesión
+                    Sign In
                   </Link>
                 )}
               </div>

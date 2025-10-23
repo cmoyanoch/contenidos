@@ -15,11 +15,11 @@ import { buildApiUrl, buildN8nWebhookUrl, config } from '../../lib/config';
 // Configurar moment en español
 moment.locale('es', {
   months: [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
   ],
-  weekdays: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
-  weekdaysShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+  weekdays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  weekdaysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 })
 
 const localizer = momentLocalizer(moment)
@@ -139,10 +139,10 @@ export default function PlanificadorPage() {
       await deleteTheme(themeToDelete.id)
       setShowDeleteConfirm(false)
       setThemeToDelete(null)
-      alert(`✅ Temática "${themeToDelete.themeName}" eliminada exitosamente`)
+      alert(`✅ Theme "${themeToDelete.themeName}" deleted successfully`)
     } catch (error) {
-      console.error('Error eliminando temática:', error)
-      alert('❌ Error al eliminar la temática')
+      console.error('Error deleting theme:', error)
+      alert('❌ Error deleting theme')
     }
   }
 
@@ -174,7 +174,7 @@ export default function PlanificadorPage() {
       (t: any) => t.id !== themeToEdit.id // eslint-disable-line @typescript-eslint/no-explicit-any
     )
     if (conflicts.length > 0) {
-      alert(`Ya existe otra temática en ese rango de fechas: "${conflicts[0].themeName}"`)
+      alert(`Another theme already exists in that date range: "${conflicts[0].themeName}"`)
       return
     }
 
@@ -186,9 +186,9 @@ export default function PlanificadorPage() {
       setShowEditModal(false)
       setThemeToEdit(null)
       setThemeForm({ themeName: '', themeDescription: '', startDate: '', endDate: '' })
-      alert('✅ Temática actualizada exitosamente')
+      alert('✅ Theme updated successfully')
     } catch {
-      alert('❌ Error al actualizar la temática')
+      alert('❌ Error updating theme')
     }
   }
 
@@ -329,11 +329,11 @@ export default function PlanificadorPage() {
         )
       }, 2000)
 
-      alert('✅ ¡Contenido en proceso de generación! El workflow N8N ha sido activado.')
+      alert('✅ Content generation in progress! N8N workflow has been activated.')
 
     } catch (error) {
       console.error('❌ Error generando contenido:', error)
-      alert(`❌ Error al generar contenido: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+      alert(`❌ Error generating content: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsGenerating(false)
     }
@@ -389,7 +389,7 @@ export default function PlanificadorPage() {
 
     // Validar campos requeridos
     if (!themeForm.themeName || !themeForm.startDate || !themeForm.endDate) {
-      alert('Por favor completa todos los campos requeridos')
+      alert('Please complete all required fields')
       return
     }
 
@@ -403,7 +403,7 @@ export default function PlanificadorPage() {
     // Detectar conflictos
     const conflicts = detectConflicts(themeForm.startDate, themeForm.endDate)
     if (conflicts.length > 0) {
-      alert(`Ya existe una temática en ese rango de fechas: "${conflicts[0].themeName}"`)
+      alert(`A theme already exists in that date range: "${conflicts[0].themeName}"`)
       return
     }
 
@@ -411,20 +411,20 @@ export default function PlanificadorPage() {
       await createTheme(themeForm)
       setShowModal(false)
       setThemeForm({ themeName: '', themeDescription: '', startDate: '', endDate: '' })
-      alert('¡Temática creada exitosamente!')
+      alert('Theme created successfully!')
     } catch (error) {
-      alert('Error al crear la temática')
+      alert('Error creating theme')
     }
   }
 
   // Función para sincronizar con N8N
   const syncWithN8N = async () => {
     if (themes.length === 0) {
-      alert('No hay temáticas para sincronizar')
+      alert('No themes to sync')
       return
     }
 
-    setSyncStatus('🔄 Sincronizando con N8N...')
+    setSyncStatus('🔄 Syncing with N8N...')
 
     try {
       // Preparar datos completos de temáticas para N8N
@@ -437,11 +437,11 @@ export default function PlanificadorPage() {
         created_at: theme.createdAt,
         // Información de días de la semana
         weekly_schedule: {
-          monday: { type: 'video_person', title: 'Video con Persona Realista', time: '10:00' },
-          tuesday: { type: 'image_stats', title: 'Imagen con Estadísticas', time: '11:00' },
-          wednesday: { type: 'video_avatar', title: 'Video Avatar Animado', time: '13:00' },
-          thursday: { type: 'cta_post', title: 'Post con CTA', time: '14:00' },
-          friday: { type: 'manual', title: 'Contenido Manual', time: '15:00' }
+          monday: { type: 'video_person', title: 'Video with Realistic Person', time: '10:00' },
+          tuesday: { type: 'image_stats', title: 'Image with Statistics', time: '11:00' },
+          wednesday: { type: 'video_avatar', title: 'Animated Avatar Video', time: '13:00' },
+          thursday: { type: 'cta_post', title: 'Post with CTA', time: '14:00' },
+          friday: { type: 'manual', title: 'Manual Content', time: '15:00' }
         }
       }))
 
@@ -470,17 +470,17 @@ export default function PlanificadorPage() {
       const result = await response.json()
       console.log('✅ Sincronización exitosa:', result)
 
-      setSyncStatus('✅ Sincronización completada')
+      setSyncStatus('✅ Sync completed')
       setTimeout(() => setSyncStatus(''), config.app.timeout)
 
       // Mostrar resumen de sincronización
-      alert(`✅ Sincronización completada:\n- ${themesData.length} temáticas sincronizadas\n- Workflow N8N activado exitosamente`)
+      alert(`✅ Sync completed:\n- ${themesData.length} themes synchronized\n- N8N workflow activated successfully`)
 
     } catch (error) {
       console.error('Error sincronizando con N8N:', error)
-      setSyncStatus('❌ Error en sincronización')
+      setSyncStatus('❌ Sync error')
       setTimeout(() => setSyncStatus(''), config.app.timeout)
-      alert(`❌ Error en sincronización: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+      alert(`❌ Sync error: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -490,11 +490,11 @@ export default function PlanificadorPage() {
       // Abrir la interfaz de N8N en una nueva pestaña
       window.open(`${config.services.n8n}/workflow`, '_blank')
 
-      alert('ℹ️ Se abrirá la interfaz de N8N donde puedes ver todos los workflows y sus ejecuciones')
+      alert('ℹ️ N8N interface will open where you can see all workflows and their executions')
 
     } catch (error) {
       console.error('Error abriendo N8N:', error)
-      alert(`❌ Error abriendo N8N: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+      alert(`❌ Error opening N8N: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 

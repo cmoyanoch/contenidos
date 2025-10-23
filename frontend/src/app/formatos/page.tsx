@@ -331,17 +331,17 @@ export default function FormatsPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="gap-2 mb-4">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">📹 Biblioteca de Formatos
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">📹 Formats Library
           </h1>
           <p className="block text-sm font-medium text-gray-700">
-            Gestiona formatos de videos e imágenes para replicación con IA
+            Manage video and image formats for AI replication
           </p>
         </div>
 
-        {/* Tipo de Formato Selector */}
+        {/* Format Type Selector */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Tipo de Formato
+            Format Type
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -358,7 +358,7 @@ export default function FormatsPage() {
               }`} />
               <h3 className="font-semibold text-gray-900">Videos</h3>
               <p className="text-sm text-gray-600 mt-1">
-                {videoFormats.length} formatos disponibles
+                {videoFormats.length} formats available
               </p>
             </button>
 
@@ -373,9 +373,9 @@ export default function FormatsPage() {
               <ImageIcon className={`w-12 h-12 mx-auto mb-3 ${
                 formatType === 'image' ? 'text-purple-600' : 'text-gray-400'
               }`} />
-              <h3 className="font-semibold text-gray-900">Imágenes</h3>
+              <h3 className="font-semibold text-gray-900">Images</h3>
               <p className="text-sm text-gray-600 mt-1">
-                {imageFormats.length} formatos disponibles
+                {imageFormats.length} formats available
               </p>
             </button>
           </div>
@@ -384,11 +384,11 @@ export default function FormatsPage() {
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-sm text-gray-600">Total Formatos</div>
+            <div className="text-sm text-gray-600">Total Formats</div>
             <div className="text-2xl font-bold text-gray-900">{currentFormats.length}</div>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-sm text-gray-600">Activos</div>
+            <div className="text-sm text-gray-600">Active</div>
             <div className="text-2xl font-bold text-green-600">
               {currentFormats.filter(f => f.is_template).length}
             </div>
@@ -497,13 +497,13 @@ export default function FormatsPage() {
                     </div>
                     {formatType === 'video' && 'recommended_veo_model' in format && (
                       <div>
-                        <span className="text-gray-500">Modelo:</span>
+                        <span className="text-gray-500">Model:</span>
                         <span className="ml-1 font-semibold text-xs text-gray-600">{format.recommended_veo_model || 'N/A'}</span>
                       </div>
                     )}
                     {formatType === 'image' && 'recommended_ai_model' in format && (
                       <div>
-                        <span className="text-gray-500">Modelo:</span>
+                        <span className="text-gray-500">Model:</span>
                         <span className="ml-1 font-semibold text-xs text-gray-600">{format.recommended_ai_model || 'N/A'}</span>
                       </div>
                     )}
@@ -547,7 +547,7 @@ export default function FormatsPage() {
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center gap-2 transition-colors"
             >
               <Upload className="w-5 h-5" />
-              Capturar Formato
+              Capture Format
             </button>
           </div>
         )}
@@ -559,7 +559,7 @@ export default function FormatsPage() {
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-2xl font-bold text-gray-900">
-                    📸 Capturar Formato de {formatType === 'video' ? 'Video' : 'Imagen'}
+                    📸 Capture {formatType === 'video' ? 'Video' : 'Image'} Format
                   </h2>
                   <button
                     onClick={() => setShowCaptureModal(false)}
@@ -573,12 +573,12 @@ export default function FormatsPage() {
                 <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
                   <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                     <span className="text-2xl">📋</span>
-                    Tipo de Contenido
+                    Content Type
                   </h3>
 
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Selecciona el tipo de contenido *
+                      Select content type *
                     </label>
                     <select
                       value={captureForm.content_type}
@@ -586,11 +586,11 @@ export default function FormatsPage() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-base text-sm font-medium text-gray-700"
                       required
                     >
-                      <option value="">-- Selecciona el tipo de contenido --</option>
-                      <option value="video_person">📹 Video con Persona Real</option>
-                      <option value="image_stats">🖼️ Imagen con Estadísticas</option>
-                      <option value="video_avatar">🤖 Video con Avatar Animado</option>
-                      <option value="cta_post">📢 Post con Call to Action</option>
+                      <option value="">-- Select content type --</option>
+                      <option value="video_person">📹 Video with Real Person</option>
+                      <option value="image_stats">🖼️ Image with Statistics</option>
+                      <option value="video_avatar">🤖 Video with Animated Avatar</option>
+                      <option value="cta_post">📢 Post with Call to Action</option>
                     </select>
                   </div>
 
@@ -599,7 +599,7 @@ export default function FormatsPage() {
                 <form onSubmit={handleCaptureSubmit} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Archivo ({contentTypeMapping[captureForm.content_type as keyof typeof contentTypeMapping]?.media_type || 'video/imagen'}) *
+                      File ({contentTypeMapping[captureForm.content_type as keyof typeof contentTypeMapping]?.media_type || 'video/image'}) *
                     </label>
                     <input
                       type="file"
@@ -614,14 +614,14 @@ export default function FormatsPage() {
                     />
                     {captureForm.content_type && (
                       <p className="text-xs text-gray-500 mt-1">
-                        💡 El sistema analizará el archivo automáticamente para generar la descripción y caso de uso
+                        💡 The system will automatically analyze the file to generate the description and use case
                       </p>
                     )}
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nombre del Formato *
+                      Format Name *
                     </label>
                     <input
                       type="text"
@@ -633,11 +633,11 @@ export default function FormatsPage() {
                     />
                   </div>
 
-                  {/* Nota informativa */}
+                  {/* Information note */}
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800">
-                      <strong>ℹ️ Nota:</strong> La descripción, caso de uso, categoría y tags se generarán automáticamente
-                      del análisis del archivo. No necesitas completarlos manualmente.
+                      <strong>ℹ️ Note:</strong> Description, use case, category and tags will be generated automatically
+                      from file analysis. You don't need to complete them manually.
                     </p>
                   </div>
 
@@ -673,12 +673,12 @@ export default function FormatsPage() {
                       {capturing ? (
                         <>
                           <RefreshCw className="w-5 h-5 animate-spin" />
-                          Capturando...
+                          Capturing...
                         </>
                       ) : (
                         <>
                           <Upload className="w-5 h-5" />
-                          Capturar Formato
+                          Capture Format
                         </>
                       )}
                     </button>

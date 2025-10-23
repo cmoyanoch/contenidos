@@ -136,7 +136,7 @@ export default function CompanyPage() {
         setStaff(data.staff || [])
       }
     } catch (error) {
-      console.error('Error cargando staff:', error)
+      console.error('Error loading staff:', error)
     } finally {
       setLoading(false)
     }
@@ -151,7 +151,7 @@ export default function CompanyPage() {
         setBranding(data)
       }
     } catch (error) {
-      console.error('Error cargando branding:', error)
+      console.error('Error loading branding:', error)
     }
   }
 
@@ -160,7 +160,7 @@ export default function CompanyPage() {
     e.preventDefault()
 
     if (!staffForm.name || !staffForm.position || !staffForm.image) {
-      alert('Por favor completa todos los campos')
+      alert('Please complete all fields')
       return
     }
 
@@ -178,16 +178,16 @@ export default function CompanyPage() {
       })
 
       if (response.ok) {
-        alert('Staff creado exitosamente')
+        alert('Staff created successfully')
         setStaffForm({ name: '', position: '', image: null })
         setShowCreateStaff(false)
         loadStaff() // Recargar la lista
       } else {
-        alert('Error al crear staff')
+        alert('Error creating staff')
       }
     } catch (error) {
-      console.error('Error creando staff:', error)
-      alert('Error al crear staff')
+      console.error('Error creating staff:', error)
+      alert('Error creating staff')
     } finally {
       setLoading(false)
     }
@@ -206,14 +206,14 @@ export default function CompanyPage() {
       })
 
       if (response.ok) {
-        alert('Staff eliminado exitosamente')
+        alert('Staff deleted successfully')
         loadStaff() // Recargar la lista
       } else {
-        alert('Error al eliminar staff')
+        alert('Error deleting staff')
       }
     } catch (error) {
-      console.error('Error eliminando staff:', error)
-      alert('Error al eliminar staff')
+      console.error('Error deleting staff:', error)
+      alert('Error deleting staff')
     } finally {
       setLoading(false)
     }
@@ -243,15 +243,15 @@ export default function CompanyPage() {
       })
 
       if (response.ok) {
-        alert('Branding guardado exitosamente')
+        alert('Branding saved successfully')
         setShowCreateBranding(false)
         loadBranding() // Recargar branding
       } else {
-        alert('Error al guardar branding')
+        alert('Error saving branding')
       }
     } catch (error) {
-      console.error('Error guardando branding:', error)
-      alert('Error al guardar branding')
+      console.error('Error saving branding:', error)
+      alert('Error saving branding')
     } finally {
       setLoading(false)
     }
@@ -264,13 +264,13 @@ export default function CompanyPage() {
 
     // Validar tipo de archivo
     if (!file.type.startsWith('image/')) {
-      alert('Solo se permiten archivos de imagen')
+      alert('Only image files are allowed')
       return
     }
 
     // Validar tamaño (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('El archivo es demasiado grande. Máximo 5MB')
+      alert('File is too large. Maximum 5MB')
       return
     }
 
@@ -289,15 +289,15 @@ export default function CompanyPage() {
       if (response.ok) {
         const data = await response.json()
         setBrandingForm({ ...brandingForm, icon_url: data.icon_url })
-        alert('Icono subido exitosamente')
+        alert('Icon uploaded successfully')
         loadBranding() // Recargar branding para mostrar el nuevo icono
       } else {
         const errorData = await response.json()
-        alert(`Error al subir icono: ${errorData.detail || 'Error desconocido'}`)
+        alert(`Error uploading icon: ${errorData.detail || 'Unknown error'}`)
       }
     } catch (error) {
-      console.error('Error subiendo icono:', error)
-      alert('Error al subir icono')
+      console.error('Error uploading icon:', error)
+      alert('Error uploading icon')
     } finally {
       setLoading(false)
     }

@@ -18,7 +18,6 @@ from api.optimization_routes import router as optimization_router
 from api.image_formats_routes import image_formats_router
 from api.staff_routes import router as staff_router
 from api.branding_routes import router as branding_router
-from api.theme_webhook_routes import router as theme_webhook_router
 from middleware.usage_monitor import UsageMonitorMiddleware
 from api.rate_limiting_routes import router as rate_limiting_router
 from middleware.rate_limiting import rate_limit_middleware
@@ -153,7 +152,6 @@ app.include_router(rate_limiting_router, tags=["rate-limiting"])
 app.include_router(image_formats_router)
 app.include_router(staff_router, tags=["staff"])
 app.include_router(branding_router, tags=["branding"])
-app.include_router(theme_webhook_router, tags=["theme-webhook"])
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):

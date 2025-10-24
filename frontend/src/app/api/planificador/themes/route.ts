@@ -213,25 +213,25 @@ export async function POST(request: NextRequest) {
 
       // Crear contenido para cada día hábil
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        const dayOfWeek = d.getDay() // 0=Sunday, 1=Monday, etc.
+        const dayOfWeekJS = d.getDay() // 0=Sunday, 1=Monday, etc.
 
-        // Solo días hábiles (1-5)
-        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-          const dayConfig = weeklyContentSchedule[dayOfWeek]
+        // Solo días hábiles (1-5) - convertir de JS (0-6) a formato (1-5)
+        if (dayOfWeekJS >= 1 && dayOfWeekJS <= 5) {
+          const dayConfig = weeklyContentSchedule[dayOfWeekJS as keyof typeof weeklyContentSchedule]
 
           if (dayConfig) {
             const contentRecord = await prisma.content_generated.create({
               data: {
                 theme_id: newTheme.id,
-                day_of_week: dayOfWeek,
+                day_of_week: dayOfWeekJS,
                 content_type: dayConfig.contentType,
                 scheduled_time: new Date(`2000-01-01T${dayConfig.scheduledTime}`),
                 scheduled_date: new Date(d),
                 social_networks: dayConfig.socialNetworks,
                 status: 'pending',
-                format_id: dayConfig.formatId || null,
-                image_format_id: dayConfig.imageFormatId || null,
-                format_type: dayConfig.formatId ? 'video' : (dayConfig.imageFormatId ? 'image' : 'manual'),
+                format_id: 'formatId' in dayConfig ? dayConfig.formatId : null,
+                image_format_id: 'imageFormatId' in dayConfig ? dayConfig.imageFormatId : null,
+                format_type: 'formatId' in dayConfig ? 'video' : ('imageFormatId' in dayConfig ? 'image' : 'manual'),
                 is_primary: true,
                 usage_context: 'main_content',
                 generation_params: {}
@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
             })
 
             contentRecords.push(contentRecord)
-            console.log(`✅ Contenido creado para día ${dayOfWeek}:`, dayConfig.contentType)
+            console.log(`✅ Contenido creado para día ${dayOfWeekJS}:`, dayConfig.contentType)
           }
         }
       }

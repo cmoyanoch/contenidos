@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useHydration } from '../../hooks/use-hydration';
-import { useThemes } from '../../hooks/use-themes';
+import { ThemePlanning, useThemes } from '../../hooks/use-themes';
 import { buildApiUrl, buildN8nWebhookUrl, config } from '../../lib/config';
 
 // Configurar moment en español
@@ -73,13 +73,13 @@ export default function PlanificadorPage() {
   })
   const [showHelpCollapsed, setShowHelpCollapsed] = useState(true) // Inicia colapsado
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [themeToDelete, setThemeToDelete] = useState<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [themeToDelete, setThemeToDelete] = useState<ThemePlanning | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [themeToEdit, setThemeToEdit] = useState<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [themeToEdit, setThemeToEdit] = useState<ThemePlanning | null>(null)
 
   // Obtener sesión y role del usuario
   const { data: session } = useSession()
-  const userRole = (session?.user as any)?.role || 'user'
+  const userRole = (session?.user as { role?: string })?.role || 'user'
   const [showThemesList, setShowThemesList] = useState(false) // Controla el colapso de la lista de temáticas
   const [isGenerating, setIsGenerating] = useState(false) // Estado de carga para generación de contenido
 
@@ -98,20 +98,25 @@ export default function PlanificadorPage() {
     generateCalendarEvents
   } = useThemes()
 
+
+
   // Cargar contenido específico del día seleccionado
   const loadCurrentDayContent = async (themeId: string, dayOfWeek: number, contentType: string) => {
+
     // ✅ Validar parámetros antes de hacer la llamada
     if (!themeId || dayOfWeek === undefined || dayOfWeek === null || !contentType) {
       console.warn('⚠️ Parámetros inválidos para loadCurrentDayContent:', { themeId, dayOfWeek, contentType })
       setCurrentDayContent(null)
-      return
+      return null
     }
 
     setLoadingContent(true)
     try {
-      const url = buildApiUrl(`/api/v1/content-generated/?theme_id=${themeId}&day_of_week=${dayOfWeek}&content_type=${contentType}`)
-      console.log('🔗 URL de la API:', url)
-      console.log('📊 Parámetros:', { themeId, dayOfWeek, contentType })
+      // Mapear el tipo de contenido del frontend al de la base de datos
+      const dbContentType = contentType
+
+
+      const url = buildApiUrl(`/api/v1/content-generated/?theme_id=${themeId}&day_of_week=${dayOfWeek}&content_type=${dbContentType}`)
 
       const response = await fetch(url)
       if (!response.ok) {
@@ -120,13 +125,19 @@ export default function PlanificadorPage() {
         throw new Error(`Error al cargar contenido del día: ${response.status}`)
       }
       const data = await response.json()
+
+
+
       // Obtener solo el primer resultado (debería ser único)
       const dayContent = data.length > 0 ? data[0] : null
       setCurrentDayContent(dayContent)
-      console.log('📊 Contenido del día cargado:', dayContent)
+
+
+      return dayContent
     } catch (error) {
       console.error('❌ Error cargando contenido del día:', error)
       setCurrentDayContent(null)
+      return null
     } finally {
       setLoadingContent(false)
     }
@@ -201,25 +212,24 @@ export default function PlanificadorPage() {
 
   // Función para generar contenido del día específico
   const handleGenerateContent = async () => {
+
     if (!selectedTheme || !selectedTheme.dayContent) {
       console.error('❌ No hay temática o contenido del día seleccionado')
       return
     }
 
+    const loadedContent = await loadCurrentDayContent(
+      selectedTheme.id,
+      selectedTheme.dayContent.dayOfWeek,
+      selectedTheme.dayContent.type
+    )
+
     setIsGenerating(true)
 
     try {
-      console.log('🚀 Iniciando generación de contenido para:', {
-        theme_id: selectedTheme.id,
-        theme_name: selectedTheme.themeName,
-        day_of_week: selectedTheme.dayContent.dayOfWeek,
-        content_type: selectedTheme.dayContent.type,
-        network_name: selectedTheme.dayContent.socialNetworks?.[0] || 'facebook',
-        dayContent_completo: selectedTheme.dayContent // ← DEBUG: Ver todo el objeto
-      })
+
 
       // Llamar DIRECTAMENTE al webhook de N8N para generar contenido
-      const WEBHOOK_ID = config.webhooks.planificador // ID del webhook del workflow "Content Planner"
 
       // Convertir hora sugerida a formato TIME (HH:MM:SS)
       const parseTimeTo24Hour = (timeString: string) => {
@@ -281,10 +291,15 @@ export default function PlanificadorPage() {
       // Usar la fecha del día seleccionado en el calendario, no la fecha de inicio de la temática
       const selectedDate = selectedTheme.selectedDate || selectedTheme.startDate
 
+
       const payload = {
+        // ID del registro en content_generated (si existe)
+        content_generated_id: loadedContent?.id || currentDayContent?.id || null,
+
         // Datos de la temática
         theme_id: selectedTheme.id,
         theme_name: selectedTheme.themeName,
+        theme_description: selectedTheme.themeDescription || '',
 
         // Datos del contenido programado
         day_of_week: dayOfWeekNumber,
@@ -306,11 +321,9 @@ export default function PlanificadorPage() {
         is_active: true
       }
 
-      console.log('📤 Enviando datos al webhook:', {
-        url: buildN8nWebhookUrl(config.webhooks.planificador),
-        method: 'POST',
-        payload: payload
-      })
+
+
+
 
       const response = await fetch(buildN8nWebhookUrl(config.webhooks.planificador), {
         method: 'POST',
@@ -325,7 +338,7 @@ export default function PlanificadorPage() {
       }
 
       const result = await response.json()
-      console.log('✅ Contenido generado exitosamente:', result)
+
 
       // Actualizar el contenido del día después de un breve delay
       setTimeout(async () => {
@@ -348,11 +361,7 @@ export default function PlanificadorPage() {
 
   // Manejar selección de evento (contenido diario)
   const handleSelectEvent = (event: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-    console.log('🎯 handleSelectEvent ejecutándose con:', event)
-    console.log('🎯 event.resource:', event.resource)
-    console.log('🎯 event.resource.theme:', event.resource?.theme)
-    console.log('🎯 event.resource.dayContent:', event.resource?.dayContent)
-    console.log('🎯 ANTES de setSelectedTheme - selectedTheme actual:', selectedTheme)
+
 
     if (!event.resource || !event.resource.theme || !event.resource.dayContent) {
       console.error('❌ Error: Datos del evento incompletos')
@@ -367,13 +376,12 @@ export default function PlanificadorPage() {
       selectedDate: event.start // ← Fecha del día seleccionado en el calendario
     }
 
-    console.log('🎯 selectedThemeData:', selectedThemeData)
-    console.log('🎯 dayContent.type:', selectedThemeData.dayContent?.type)
-    console.log('🎯 dayContent.title:', selectedThemeData.dayContent?.title)
+
     setSelectedTheme(selectedThemeData)
 
     // Cargar contenido específico del día seleccionado
     if (selectedThemeData.id && selectedThemeData.dayContent) {
+
       loadCurrentDayContent(
         selectedThemeData.id,
         selectedThemeData.dayContent.dayOfWeek,
@@ -381,13 +389,6 @@ export default function PlanificadorPage() {
       )
     }
 
-    console.log('🎯 selectedTheme actualizado, modal debería aparecer')
-
-    // Verificar si el estado se actualizó
-    setTimeout(() => {
-      console.log('🎯 selectedTheme después de setState:', selectedTheme)
-      console.log('🎯 selectedTheme.dayContent?.type:', selectedTheme?.dayContent?.type)
-    }, 100)
   }
 
   // Manejar envío del formulario
@@ -452,7 +453,6 @@ export default function PlanificadorPage() {
         }
       }))
 
-      console.log('📤 Enviando temáticas a N8N webhook:', themesData)
 
       // Llamar DIRECTAMENTE al webhook de N8N para sincronizar
       // Usar configuración centralizada
@@ -475,7 +475,7 @@ export default function PlanificadorPage() {
       }
 
       const result = await response.json()
-      console.log('✅ Sincronización exitosa:', result)
+
 
       setSyncStatus('✅ Sync completed')
       setTimeout(() => setSyncStatus(''), config.app.timeout)
@@ -681,17 +681,9 @@ export default function PlanificadorPage() {
       return eventDate === dateString
     })
 
-    // Debug: Verificar eventos del día
-    console.log(`🔍 CustomDateCell para ${dateString}:`, {
-      totalEvents: events.length,
-      dayEvents: dayEvents.length,
-      dayEventsData: dayEvents
-    })
 
     // Determinar si tiene temática asociada
     const hasTheme = dayEvents.length > 0 && dayEvents[0].resource?.theme
-
-    console.log(`🎯 CustomDateCell ${dateString} - hasTheme:`, hasTheme)
 
     // Prioridad de color de fondo: Temática (siempre) > Otro mes (sin temática) > Fin de semana (sin temática) > Normal
     let finalBackgroundColor = 'transparent'
@@ -725,20 +717,12 @@ export default function PlanificadorPage() {
         }}
 
         onClick={(e) => {
-          console.log(`🖱️ Click en CustomDateCell ${dateString}`, {
-            hasTheme,
-            dayEventsLength: dayEvents.length,
-            eventsLength: events.length
-          })
 
           e.stopPropagation() // Evita que el evento se propague a elementos padre del calendario
           if (hasTheme && dayEvents.length > 0) {
-            console.log('🎯 Click en celda con temática:', value, dayEvents[0])
+
             // Abre el popup con la información del primer evento del día
             handleSelectEvent(dayEvents[0])
-          } else {
-            console.log('🎯 Click en celda sin temática o sin eventos:', value)
-            // No hace nada si no hay temática
           }
         }}
       >
@@ -779,16 +763,7 @@ export default function PlanificadorPage() {
   // Generar eventos para el calendario
   const events = generateCalendarEvents(themes)
 
-  // Debug: Verificar eventos generados
-  console.log('📅 Planificador - Temáticas cargadas:', themes.length)
-  console.log('📅 Planificador - Eventos generados:', events.length)
-  if (events.length > 0) {
-    console.log('📅 Planificador - Primer evento:', events[0])
-    console.log('📅 Planificador - Todos los eventos:', events)
-  } else {
-    console.log('📅 Planificador - No hay eventos generados')
-    console.log('📅 Planificador - Temáticas disponibles:', themes)
-  }
+
 
   // ✅ Mostrar error si existe
   if (error) {
@@ -987,7 +962,7 @@ export default function PlanificadorPage() {
                   Welcome to the Planner!
                 </h3>
                 <p className="text-yellow-800 mb-3">
-                  You don't have themes created yet. To get started:
+                  You don&apos;t have themes created yet. To get started:
                 </p>
                 <ol className="list-decimal list-inside text-yellow-800 space-y-1 mb-3">
                   <li>Click the <strong>&quot;➕ New Theme&quot;</strong> button above</li>
@@ -1269,11 +1244,11 @@ export default function PlanificadorPage() {
           popupOffset={{ x: 10, y: 10 }}
           showMultiDayTimes={false}
           onNavigate={(newDate: Date) => {
-            console.log('📅 Navegación del calendario:', newDate)
+
             setCurrentDate(newDate)
           }}
           onView={(newView: string) => {
-            console.log('📅 Cambio de vista:', newView)
+
             setCurrentView(newView)
           }}
           messages={{
@@ -1409,10 +1384,7 @@ export default function PlanificadorPage() {
 
         {/* Modal de detalles de contenido diario */}
         {selectedTheme && (() => {
-          console.log('🎯 RENDERIZANDO MODAL - selectedTheme:', selectedTheme)
-          console.log('🎯 MODAL - dayContent.type:', selectedTheme.dayContent?.type)
-          console.log('🎯 MODAL - Renderizando overlay del modal')
-          console.log('🎯 MODAL - Renderizando contenido del modal')
+
 
           return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
@@ -1427,7 +1399,7 @@ export default function PlanificadorPage() {
                           {selectedTheme.dayContent.type === 'image_stats' && '🖼️'}
                           {selectedTheme.dayContent.type === 'video_avatar' && '🎭'}
                           {selectedTheme.dayContent.type === 'cta_post' && '📢'}
-                          {selectedTheme.dayContent.type === 'manual' && '✏️'}
+                          {selectedTheme.dayContent.type === 'content_manual' && '✏️'}
                           {' '}{selectedTheme.dayContent.title}
                         </>
                       ) : (
@@ -1593,7 +1565,7 @@ export default function PlanificadorPage() {
                               </div>
                             )}
 
-                            {selectedTheme.dayContent.type === 'manual' && (
+                            {selectedTheme.dayContent.type === 'content_manual' && (
                               <div className="text-center">
                                 <div className="text-4xl mb-2">✏️</div>
                                 <h3 className="font-semibold text-gray-900 mb-2">Manual Content</h3>

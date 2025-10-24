@@ -31,7 +31,7 @@ export interface WeeklySchedule {
 }
 
 export interface ContentDay {
-  type: 'video_person' | 'image_stats' | 'video_avatar' | 'cta_post' | 'manual' | 'free'
+  type: 'video_person' | 'image_stats' | 'video_avatar' | 'cta_post' | 'content_manual' | 'free'
   duration?: number
   description: string
   title: string
@@ -39,6 +39,7 @@ export interface ContentDay {
   suggestedTimeReason?: string
   recommendedNetworks?: string[]
   networkStrategy?: string
+  dayOfWeek?: number // ✅ Agregar dayOfWeek (1=Lunes, 7=Domingo)
 }
 
 // Plantilla semanal predefinida con horarios óptimos y redes sociales recomendadas
@@ -82,9 +83,9 @@ export const WEEKLY_TEMPLATE: WeeklySchedule = {
     networkStrategy: 'Thursday is the best day for conversions. LinkedIn for professional B2B leads. Facebook and Instagram for audience making financial decisions.'
   },
   friday: {
-    type: 'manual',
+    type: 'content_manual',
     description: 'Reserved space to define content manually',
-    title: 'Custom manual content',
+    title: 'Manual content',
     suggestedTime: '10:00 AM',
     suggestedTimeReason: '🎉 Early Friday - Before the weekend',
     recommendedNetworks: ['Instagram', 'Twitter/X', 'Facebook'],
@@ -113,18 +114,17 @@ export const useThemes = () => {
   const fetchThemes = useCallback(async () => {
     if (!isMounted || hasInitialized) return // ✅ Doble protección contra hidratación
 
-    console.log('🔄 useThemes: fetchThemes iniciando...')
     setLoading(true)
     setHasInitialized(true) // ✅ Marcar como inicializado
 
     try {
       const response = await fetch('/api/planificador/themes')
-      console.log('🔄 useThemes: Response status:', response.status)
+
       if (!response.ok) throw new Error('Error loading themes')
       const data = await response.json()
-      console.log('🔄 useThemes: Datos recibidos:', data)
+
       setThemes(data)
-      console.log('🔄 useThemes: Temáticas establecidas:', data.length)
+
     } catch (err) {
       console.error('❌ useThemes: Error:', err)
       setError(err instanceof Error ? err.message : 'Unknown error')
@@ -336,6 +336,12 @@ export const useThemes = () => {
             const eventDate = new Date(currentDate)
             eventDate.setHours(0, 0, 0, 0) // Normalizar a medianoche
 
+            // ✅ Agregar dayOfWeek al dayContent
+            const dayContentWithWeek = {
+              ...dayContent,
+              dayOfWeek: dayOfWeek === 0 ? 7 : dayOfWeek // Convertir 0=Domingo a 7=Domingo
+            }
+
             events.push({
               id: `${theme.id}-${dayKey}-${currentDate.toISOString().split('T')[0]}`,
               title: eventTitle,
@@ -344,7 +350,7 @@ export const useThemes = () => {
               allDay: true, // true para eventos de todo el día
               resource: {
                 theme: theme,
-                dayContent: dayContent,
+                dayContent: dayContentWithWeek, // ✅ Ahora incluye dayOfWeek
                 dayKey: dayKey
               }
             })
@@ -397,7 +403,7 @@ export const useThemes = () => {
 
   useEffect(() => {
     if (isMounted && !hasInitialized) {
-      console.log('🔄 useThemes: useEffect ejecutándose...')
+
       fetchThemes()
     }
   }, [fetchThemes, isMounted, hasInitialized])

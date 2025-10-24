@@ -169,6 +169,88 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // 🎯 NUEVO: Crear contenido automáticamente (sin webhook)
+    try {
+      console.log('🎯 Creando contenido automático para temática:', newTheme.id)
+
+      const contentRecords = []
+      const startDate = new Date(newTheme.startDate)
+      const endDate = new Date(newTheme.endDate)
+
+      // Configuración de contenido por día de la semana
+      const weeklyContentSchedule = {
+        1: { // Lunes
+          contentType: 'video_person',
+          scheduledTime: '10:00:00',
+          socialNetworks: ['instagram', 'facebook'],
+          formatId: 9
+        },
+        2: { // Martes
+          contentType: 'image_stats',
+          scheduledTime: '11:00:00',
+          socialNetworks: ['instagram', 'facebook'],
+          imageFormatId: 12
+        },
+        3: { // Miércoles
+          contentType: 'video_avatar',
+          scheduledTime: '13:00:00',
+          socialNetworks: ['instagram', 'facebook'],
+          formatId: 10
+        },
+        4: { // Jueves
+          contentType: 'cta_post',
+          scheduledTime: '11:30:00',
+          socialNetworks: ['instagram', 'facebook'],
+          formatId: 11
+        },
+        5: { // Viernes
+          contentType: 'content_manual',
+          scheduledTime: '10:00:00',
+          socialNetworks: ['instagram', 'facebook'],
+          imageFormatId: 13
+        }
+      }
+
+      // Crear contenido para cada día hábil
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dayOfWeek = d.getDay() // 0=Sunday, 1=Monday, etc.
+
+        // Solo días hábiles (1-5)
+        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+          const dayConfig = weeklyContentSchedule[dayOfWeek]
+
+          if (dayConfig) {
+            const contentRecord = await prisma.content_generated.create({
+              data: {
+                theme_id: newTheme.id,
+                day_of_week: dayOfWeek,
+                content_type: dayConfig.contentType,
+                scheduled_time: new Date(`2000-01-01T${dayConfig.scheduledTime}`),
+                scheduled_date: new Date(d),
+                social_networks: dayConfig.socialNetworks,
+                status: 'pending',
+                format_id: dayConfig.formatId || null,
+                image_format_id: dayConfig.imageFormatId || null,
+                format_type: dayConfig.formatId ? 'video' : (dayConfig.imageFormatId ? 'image' : 'manual'),
+                is_primary: true,
+                usage_context: 'main_content',
+                generation_params: {}
+              }
+            })
+
+            contentRecords.push(contentRecord)
+            console.log(`✅ Contenido creado para día ${dayOfWeek}:`, dayConfig.contentType)
+          }
+        }
+      }
+
+      console.log(`✅ ${contentRecords.length} registros de contenido creados para la temática ${newTheme.themeName}`)
+
+    } catch (contentError) {
+      console.error('❌ Error creando contenido automático:', contentError)
+      // No fallar la creación de temática si el contenido falla
+    }
+
     return NextResponse.json(newTheme, { status: 201 })
   } catch (error) {
     console.error('Error creating theme:', error)

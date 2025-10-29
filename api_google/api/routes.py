@@ -30,6 +30,10 @@ from models.schemas import (
     VideoAnalysisResponse,
     ContinuityGenerationRequest,
     ContinuityGenerationResponse,
+    CorrelatedImagesRequest,
+    CorrelatedImagesResponse,
+    SceneData,
+    SceneWithImages,
     # VEO 3.1 Schemas
     Veo31VideoRequest,
     Veo31FrameTransitionRequest,
@@ -1786,7 +1790,7 @@ async def download_veo31_video(operation_id: str):
 @video_router.post("/veo-3.1/video", response_model=Veo31Response)
 async def generate_veo31_video(request: Veo31VideoRequest):
     """
-    Genera video usando Veo 3.1 - Basado en documentación oficial de Google
+    Genera video usando Veo 3.1 - Implementación real con Google API
     """
     try:
         logger.info(f"🎬 Iniciando generación Veo 3.1: {request.prompt[:50]}...")
@@ -1794,21 +1798,24 @@ async def generate_veo31_video(request: Veo31VideoRequest):
         # Crear operación en base de datos con prefijo VEO 3.1
         operation_id = f"veo31_{str(uuid.uuid4())}"
 
-        # Simular llamada a Veo 3.1 API (implementar según documentación oficial)
-        # Por ahora retornamos respuesta de ejemplo
-        response = Veo31Response(
+        # Importar servicio Veo
+        from services.veo_service import VeoService
+        veo_service = VeoService()
+
+        # Generar video usando Veo 3.1 real
+        response = await veo_service.generate_veo31_video(
             operation_id=operation_id,
-            status="pending",
-            message="Generación de video Veo 3.1 iniciada",
-            veo_model=request.veo_model,
-            estimated_completion_time=120,  # 2 minutos estimado
+            prompt=request.prompt,
+            aspect_ratio=request.aspect_ratio,
             resolution=request.resolution,
-            duration=request.duration_seconds,
-            has_audio=True,
-            frame_rate=24
+            duration_seconds=request.duration_seconds,
+            veo_model=request.veo_model,
+            negative_prompt=request.negative_prompt,
+            person_generation=request.person_generation,
+            style_preset=request.style_preset
         )
 
-        logger.info(f"✅ Operación Veo 3.1 creada: {operation_id}")
+        logger.info(f"✅ Operación Veo 3.1 completada: {operation_id}")
         return response
 
     except Exception as e:
@@ -1818,7 +1825,7 @@ async def generate_veo31_video(request: Veo31VideoRequest):
 @video_router.post("/veo-3.1/frame-transition", response_model=Veo31Response)
 async def generate_veo31_frame_transition(request: Veo31FrameTransitionRequest):
     """
-    Genera transición entre frames usando Veo 3.1
+    Genera transición entre frames usando Veo 3.1 - Implementación real con Google API
     """
     try:
         logger.info(f"🎬 Iniciando transición Veo 3.1: {request.prompt[:50]}...")
@@ -1826,20 +1833,25 @@ async def generate_veo31_frame_transition(request: Veo31FrameTransitionRequest):
         # Crear operación en base de datos con prefijo VEO 3.1
         operation_id = f"veo31_{str(uuid.uuid4())}"
 
-        # Simular llamada a Veo 3.1 API para transición
-        response = Veo31Response(
+        # Importar servicio Veo
+        from services.veo_service import VeoService
+        veo_service = VeoService()
+
+        # Generar transición usando Veo 3.1 real
+        response = await veo_service.generate_veo31_frame_transition(
             operation_id=operation_id,
-            status="pending",
-            message="Transición de frames Veo 3.1 iniciada",
-            veo_model=request.veo_model,
-            estimated_completion_time=90,  # 1.5 minutos estimado
+            prompt=request.prompt,
+            start_frame_base64=request.start_frame_base64,
+            end_frame_base64=request.end_frame_base64,
+            aspect_ratio=request.aspect_ratio,
             resolution=request.resolution,
-            duration=request.duration_seconds,
-            has_audio=True,
-            frame_rate=24
+            duration_seconds=request.duration_seconds,
+            transition_style=request.transition_style,
+            veo_model=request.veo_model,
+            negative_prompt=request.negative_prompt
         )
 
-        logger.info(f"✅ Transición Veo 3.1 creada: {operation_id}")
+        logger.info(f"✅ Transición Veo 3.1 completada: {operation_id}")
         return response
 
     except Exception as e:
@@ -1849,7 +1861,7 @@ async def generate_veo31_frame_transition(request: Veo31FrameTransitionRequest):
 @video_router.post("/veo-3.1/video-extension", response_model=Veo31Response)
 async def generate_veo31_video_extension(request: Veo31VideoExtensionRequest):
     """
-    Extiende video existente usando Veo 3.1
+    Extiende video existente usando Veo 3.1 - Implementación real con Google API
     """
     try:
         logger.info(f"🎬 Iniciando extensión Veo 3.1: {request.prompt[:50]}...")
@@ -1857,24 +1869,50 @@ async def generate_veo31_video_extension(request: Veo31VideoExtensionRequest):
         # Crear operación en base de datos con prefijo VEO 3.1
         operation_id = f"veo31_{str(uuid.uuid4())}"
 
-        # Simular llamada a Veo 3.1 API para extensión
-        response = Veo31Response(
+        # Importar servicio Veo
+        from services.veo_service import VeoService
+        veo_service = VeoService()
+
+        # Generar extensión usando Veo 3.1 real
+        response = await veo_service.generate_veo31_video_extension(
             operation_id=operation_id,
-            status="pending",
-            message="Extensión de video Veo 3.1 iniciada",
+            prompt=request.prompt,
+            original_video_url=request.original_video_url,
+            extension_duration=request.extension_duration,
             veo_model=request.veo_model,
-            estimated_completion_time=150,  # 2.5 minutos estimado
-            resolution="720p",  # Solo 720p para extensiones según documentación
-            duration=request.extension_duration,
-            has_audio=True,
-            frame_rate=24
+            negative_prompt=request.negative_prompt
         )
 
-        logger.info(f"✅ Extensión Veo 3.1 creada: {operation_id}")
+        logger.info(f"✅ Extensión Veo 3.1 completada: {operation_id}")
         return response
 
     except Exception as e:
         logger.error(f"❌ Error generando extensión Veo 3.1: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@video_router.get("/veo-3.1/status/{operation_id}", response_model=Veo31StatusResponse)
+async def get_veo31_operation_status(operation_id: str):
+    """
+    Obtiene el estado de una operación Veo 3.1
+    """
+    try:
+        logger.info(f"🔍 Consultando estado Veo 3.1: {operation_id}")
+
+        # Importar servicio Veo
+        from services.veo_service import VeoService
+        veo_service = VeoService()
+
+        # Obtener estado de la operación
+        response = await veo_service.get_veo31_operation_status(operation_id)
+
+        logger.info(f"✅ Estado Veo 3.1 obtenido: {operation_id} - {response.status}")
+        return response
+
+    except ValueError as e:
+        logger.error(f"❌ Operación Veo 3.1 no encontrada: {e}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"❌ Error obteniendo estado Veo 3.1: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1935,4 +1973,66 @@ async def get_system_status():
 
     except Exception as e:
         logger.error(f"❌ Error consultando estado general: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# === ENDPOINT: GENERACIÓN DE IMÁGENES CORRELACIONADAS ===
+
+@video_router.post("/generate-correlated-images", response_model=CorrelatedImagesResponse)
+async def generate_correlated_images_from_scenes(request: CorrelatedImagesRequest):
+    """
+    Genera imágenes correlacionadas desde escenas con diálogos
+
+    FLUJO:
+    1. Recibe imagen (base64 o URL) + escenas con prompts
+    2. Extrae diálogos de cada escena
+    3. Genera 2 imágenes por escena (inicio/final) usando Gemini
+    4. Guarda imágenes como PNG en aspect ratio 16:9
+    5. Devuelve escenas con campos start_image y end_image agregados
+
+    INPUT:
+    - base_image_base64: Imagen de referencia en base64 (opcional)
+    - base_image_url: URL de imagen de referencia (opcional, local o remota)
+    - scenes: Lista de escenas con prompts completos
+    - aspect_ratio: Relación de aspecto (default: 16:9)
+    - character_style: Estilo del personaje (default: realistic)
+
+    NOTA: Debe proporcionar base_image_base64 O base_image_url (no ambos)
+
+    OUTPUT:
+    - scenes: Escenas originales + campos start_image y end_image
+    """
+    try:
+        logger.info(f"🎬 Iniciando generación de imágenes correlacionadas para {len(request.scenes)} escenas")
+
+        # Importar servicio
+        from services.correlated_images_service import CorrelatedImagesService
+
+        # Crear instancia del servicio
+        service = CorrelatedImagesService()
+
+        # Convertir request a dict para el servicio
+        request_data = {
+            "base_image_base64": request.base_image_base64,
+            "base_image_url": request.base_image_url,
+            "mime_type": request.mime_type,
+            "scenes": [scene.dict() for scene in request.scenes],
+            "aspect_ratio": request.aspect_ratio,
+            "character_style": request.character_style,
+            "temperature": request.temperature,
+            "max_output_tokens": request.max_output_tokens
+        }
+
+        # Generar imágenes correlacionadas
+        result = service.generate_correlated_images(request_data)
+
+        if result.get("success"):
+            logger.info(f"✅ Generación exitosa: {len(result.get('scenes', []))} escenas procesadas")
+            return CorrelatedImagesResponse(**result)
+        else:
+            logger.error(f"❌ Error en generación: {result.get('error', 'Error desconocido')}")
+            raise HTTPException(status_code=500, detail=result.get('error', 'Error generando imágenes'))
+
+    except Exception as e:
+        logger.error(f"❌ Error en endpoint de imágenes correlacionadas: {e}")
         raise HTTPException(status_code=500, detail=str(e))

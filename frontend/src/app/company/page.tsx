@@ -43,7 +43,7 @@ interface CompanyBranding {
   fax?: string
   toll_free_phone?: string
   // 🕐 Horarios
-  business_hours?: any
+  business_hours?: any // eslint-disable-line @typescript-eslint/no-explicit-any
   // 🎨 Visual
   icon_url?: string
   // 🌍 Información adicional
@@ -61,6 +61,19 @@ interface CompanyBranding {
 export default function CompanyPage() {
   // ✅ Hook de hidratación para prevenir errores de hidratación
   const isHydrated = useHydration()
+
+  // Función helper para construir URLs de imágenes de staff
+  const buildStaffImageUrl = (imagePath: string | undefined): string => {
+    if (!imagePath) return ''
+
+    // Si ya tiene prefijo "banana/", usar tal como está
+    if (imagePath.startsWith('banana/')) {
+      return buildUploadUrl(imagePath)
+    }
+
+    // Si no tiene prefijo "banana/", agregarlo automáticamente
+    return buildUploadUrl(`banana/${imagePath}`)
+  }
 
   const [activeTab, setActiveTab] = useState<'staff' | 'branding'>('staff')
   const [staff, setStaff] = useState<StaffEmployee[]>([])
@@ -453,8 +466,8 @@ export default function CompanyPage() {
                           {/* Imagen Original */}
                           <img
                             src={employee.original_image_url
-                              ? buildUploadUrl(employee.original_image_url)
-                              : buildUploadUrl(employee.image_url_1)
+                              ? buildStaffImageUrl(employee.original_image_url)
+                              : buildStaffImageUrl(employee.image_url_1)
                             }
                             alt={employee.name}
                             className="w-32 h-48 object-cover rounded-lg border-2 border-gray-300 shadow-sm"

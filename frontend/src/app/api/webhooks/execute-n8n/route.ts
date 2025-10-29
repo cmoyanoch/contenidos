@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
+import { NextRequest, NextResponse } from 'next/server';
 
 // Función auxiliar para convertir archivo a base64
-async function convertFileToBase64(file: any): Promise<string> {
+async function convertFileToBase64(file: File): Promise<string> {
   try {
     // En Node.js, el archivo de FormData ya tiene un método arrayBuffer()
     const arrayBuffer = await file.arrayBuffer()
@@ -24,8 +23,8 @@ export async function POST(request: NextRequest) {
 
     // Verificar si es FormData o JSON
     const contentType = request.headers.get('content-type') || ''
-    let body: any = {}
-    let imageFile: any = null
+    let body: any = {} // eslint-disable-line @typescript-eslint/no-explicit-any
+    let imageFile: any = null // eslint-disable-line @typescript-eslint/no-explicit-any
 
     if (contentType.includes('multipart/form-data')) {
       // Es FormData - manejar archivo
@@ -133,9 +132,9 @@ export async function POST(request: NextRequest) {
           contentType: 'image-to-video'
         }
       } else {
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Datos de imagen requeridos' 
+        return NextResponse.json({
+          success: false,
+          error: 'Datos de imagen requeridos'
         }, { status: 400 })
       }
     }
@@ -199,7 +198,7 @@ export async function POST(request: NextRequest) {
       result: apiResult
     })
 
-  } catch (error: any) {
+  } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
     console.error('❌ Error ejecutando webhook N8N:', error)
     return NextResponse.json({
       success: false,

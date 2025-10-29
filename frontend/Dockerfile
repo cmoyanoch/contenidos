@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Instalar dependencias basadas en el gestor de paquetes preferido
 COPY package.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Rebuild el código fuente solo cuando sea necesario
 FROM base AS builder

@@ -25,6 +25,28 @@ moment.locale('es', {
 
 const localizer = momentLocalizer(moment)
 
+// Tipos para contenido generado
+interface ContentGenerated {
+  id: number
+  theme_id: string
+  day_of_week: number
+  content_type: string
+  scheduled_time: string
+  scheduled_date: string
+  social_networks: string[]
+  file_path: string | null
+  file_type: string | null
+  directory_type: string | null
+  status: 'pending' | 'generating' | 'completed' | 'published' | 'failed'
+  n8n_execution_id: string | null
+  operation_id: string | null
+  format_id: number | null
+  preview_generated_at: string | null
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 // Función para ajustar fechas a días hábiles (misma lógica que use-themes.ts)
 const adjustToBusinessDay = (date: Date, isStartDate: boolean): Date => {
   // ✅ CORREGIR PROBLEMA DE TIMEZONE: Crear fecha local sin conversión UTC
@@ -61,7 +83,7 @@ export default function PlanificadorPage() {
   const [showWeeklyStrategy, setShowWeeklyStrategy] = useState(false)
   const [showTips, setShowTips] = useState(false)
   const [showContentStatus, setShowContentStatus] = useState(false)
-  const [currentDayContent, setCurrentDayContent] = useState<any>(null) // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [currentDayContent, setCurrentDayContent] = useState<ContentGenerated | null>(null)
   const [loadingContent, setLoadingContent] = useState(false)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [currentView, setCurrentView] = useState('month')
@@ -82,6 +104,7 @@ export default function PlanificadorPage() {
   const userRole = (session?.user as { role?: string })?.role || 'user'
   const [showThemesList, setShowThemesList] = useState(false) // Controla el colapso de la lista de temáticas
   const [isGenerating, setIsGenerating] = useState(false) // Estado de carga para generación de contenido
+  const [generatedContents, setGeneratedContents] = useState<ContentGenerated[]>([]) // Lista de todos los contenidos generados
 
   // ✅ Hook de hidratación robusta
   const isHydrated = useHydration(200)
@@ -98,25 +121,93 @@ export default function PlanificadorPage() {
     generateCalendarEvents
   } = useThemes()
 
+  // Cargar todos los contenidos generados para todas las temáticas
+  const loadAllGeneratedContents = async () => {
+    if (themes.length === 0) return
 
+    try {
+      // Obtener todos los contenidos generados sin filtros
+      const url = buildApiUrl('/api/v1/content-generated/')
+      const response = await fetch(url)
+
+      if (!response.ok) {
+        console.error('❌ Error cargando contenidos generados')
+        return
+      }
+
+      const data = await response.json()
+      setGeneratedContents(data)
+      console.log('✅ Contenidos generados cargados:', data.length)
+    } catch (error) {
+      console.error('❌ Error cargando contenidos generados:', error)
+    }
+  }
+
+  // Cargar contenidos generados cuando cambien los themes
+  React.useEffect(() => {
+    if (themes.length > 0 && isMounted) {
+      loadAllGeneratedContents()
+    }
+  }, [themes, isMounted]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Función auxiliar para detectar si es video
+  const isVideoFile = (filePath: string | null, fileType: string | null): boolean => {
+    if (!filePath && !fileType) return false
+
+    // Detectar por file_type
+    if (fileType) {
+      const lowerType = fileType.toLowerCase()
+      if (lowerType.startsWith('video/') || lowerType === 'mp4' || lowerType === 'webm' || lowerType === 'avi') {
+        return true
+      }
+    }
+
+    // Detectar por extensión del archivo
+    if (filePath) {
+      const lowerPath = filePath.toLowerCase()
+      if (lowerPath.endsWith('.mp4') || lowerPath.endsWith('.webm') || lowerPath.endsWith('.avi') || lowerPath.endsWith('.mov')) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  // Función auxiliar para verificar si un día tiene contenido generado
+  const hasGeneratedContent = (themeId: string, scheduledDate: string, contentType: string) => {
+    // Normalizar la fecha a formato YYYY-MM-DD
+    const normalizedDate = scheduledDate.split('T')[0]
+
+    return generatedContents.some(
+      content =>
+        content.theme_id === themeId &&
+        content.scheduled_date === normalizedDate &&
+        content.content_type === contentType &&
+        content.file_path !== null &&
+        content.file_path !== ''
+    )
+  }
 
   // Cargar contenido específico del día seleccionado
-  const loadCurrentDayContent = async (themeId: string, dayOfWeek: number, contentType: string) => {
+  const loadCurrentDayContent = async (themeId: string, scheduledDate: string, contentType: string) => {
 
     // ✅ Validar parámetros antes de hacer la llamada
-    if (!themeId || dayOfWeek === undefined || dayOfWeek === null || !contentType) {
-      console.warn('⚠️ Parámetros inválidos para loadCurrentDayContent:', { themeId, dayOfWeek, contentType })
+    if (!themeId || !scheduledDate || !contentType) {
+      console.warn('⚠️ Parámetros inválidos para loadCurrentDayContent:', { themeId, scheduledDate, contentType })
       setCurrentDayContent(null)
       return null
     }
 
     setLoadingContent(true)
     try {
-      // Mapear el tipo de contenido del frontend al de la base de datos
+      // Normalizar fecha a formato YYYY-MM-DD
+      const normalizedDate = scheduledDate.split('T')[0]
       const dbContentType = contentType
 
+      // Usar scheduled_date en lugar de day_of_week
+      const url = buildApiUrl(`/api/v1/content-generated/?theme_id=${themeId}&scheduled_date=${normalizedDate}&content_type=${dbContentType}`)
 
-      const url = buildApiUrl(`/api/v1/content-generated/?theme_id=${themeId}&day_of_week=${dayOfWeek}&content_type=${dbContentType}`)
+      console.log('🔍 loadCurrentDayContent request:', { themeId, scheduledDate: normalizedDate, contentType, url })
 
       const response = await fetch(url)
       if (!response.ok) {
@@ -130,7 +221,30 @@ export default function PlanificadorPage() {
 
       // Obtener solo el primer resultado (debería ser único)
       const dayContent = data.length > 0 ? data[0] : null
+      console.log('🔍 loadCurrentDayContent resultado:', {
+        themeId,
+        scheduledDate: normalizedDate,
+        contentType,
+        dataLength: data.length,
+        dayContent,
+        hasFile: dayContent?.file_path ? 'SÍ' : 'NO',
+        fileType: dayContent?.file_type,
+        isVideo: dayContent ? isVideoFile(dayContent.file_path, dayContent.file_type) : false,
+        contentId: dayContent?.id || 'NO ENCONTRADO'
+      })
       setCurrentDayContent(dayContent)
+
+      // Log adicional para debug del modal
+      if (dayContent && dayContent.file_path) {
+        console.log('✅ CONTENIDO CON ARCHIVO DETECTADO:', {
+          file_path: dayContent.file_path,
+          file_type: dayContent.file_type,
+          full_url: `${config.api.google}/uploads/${dayContent.file_path}`,
+          will_show_video: isVideoFile(dayContent.file_path, dayContent.file_type)
+        })
+      } else {
+        console.log('⚠️ NO HAY ARCHIVO - Se mostrará vista conceptual')
+      }
 
 
       return dayContent
@@ -213,16 +327,20 @@ export default function PlanificadorPage() {
   // Función para generar contenido del día específico
   const handleGenerateContent = async () => {
 
-    if (!selectedTheme || !selectedTheme.dayContent) {
+    if (!selectedTheme || !selectedTheme.dayContent || !selectedTheme.selectedDate) {
       console.error('❌ No hay temática o contenido del día seleccionado')
       return
     }
 
+    const dateString = selectedTheme.selectedDate.toISOString()
+
     const loadedContent = await loadCurrentDayContent(
       selectedTheme.id,
-      selectedTheme.dayContent.dayOfWeek,
+      dateString,
       selectedTheme.dayContent.type
     )
+
+
 
     setIsGenerating(true)
 
@@ -342,11 +460,14 @@ export default function PlanificadorPage() {
 
       // Actualizar el contenido del día después de un breve delay
       setTimeout(async () => {
-        await loadCurrentDayContent(
-          selectedTheme.id,
-          selectedTheme.dayContent.dayOfWeek,
-          selectedTheme.dayContent.type
-        )
+        if (selectedTheme.selectedDate) {
+          const dateString = selectedTheme.selectedDate.toISOString()
+          await loadCurrentDayContent(
+            selectedTheme.id,
+            dateString,
+            selectedTheme.dayContent.type
+          )
+        }
       }, 2000)
 
       alert('✅ Content generation in progress! N8N workflow has been activated.')
@@ -380,11 +501,13 @@ export default function PlanificadorPage() {
     setSelectedTheme(selectedThemeData)
 
     // Cargar contenido específico del día seleccionado
-    if (selectedThemeData.id && selectedThemeData.dayContent) {
+    if (selectedThemeData.id && selectedThemeData.dayContent && selectedThemeData.selectedDate) {
+      // Convertir la fecha a formato ISO string
+      const dateString = selectedThemeData.selectedDate.toISOString()
 
       loadCurrentDayContent(
         selectedThemeData.id,
-        selectedThemeData.dayContent.dayOfWeek,
+        dateString,
         selectedThemeData.dayContent.type
       )
     }
@@ -711,7 +834,7 @@ export default function PlanificadorPage() {
         className={`rbc-date-cell custom-date-cell ${isWeekendDay && !isOffRange ? 'weekend-cell' : ''} ${hasTheme ? 'rbc-themed-cell' : ''} ${isOffRange ? 'rbc-off-range' : ''}`}
         style={{
           backgroundColor: finalBackgroundColor,
-          color: hasTheme && !isOffRange ? '#1f2937' : undefined, // Color más oscuro para números de días con temática
+          color: hasTheme ? '#1f2937' : undefined, // Color más oscuro para números de días con temática (sin importar si es off-range)
           transition: 'all 0.2s ease',
           cursor: hasTheme ? 'pointer' : 'default'
         }}
@@ -738,10 +861,18 @@ export default function PlanificadorPage() {
               const icon = getContentIcon(dayContent.type)
               const themeColor = hasTheme ? getThemeColor(dayEvents[0].resource.theme.themeName) : '#3B82F6'
 
+              // Verificar si este día tiene contenido generado (usando fecha específica)
+              const eventDate = event.start.toISOString().split('T')[0] // Formato YYYY-MM-DD
+              const contentGenerated = hasGeneratedContent(
+                event.resource.theme.id,
+                eventDate,
+                dayContent.type
+              )
+
               return (
                 <div
                   key={`manual-event-${event.id}`}
-                  className="text-xs p-1 rounded text-white font-medium"
+                  className="text-xs p-1 rounded text-white font-medium relative"
                   style={{
                     fontSize: '10px',
                     lineHeight: '1.2',
@@ -750,6 +881,15 @@ export default function PlanificadorPage() {
                   // onClick eliminado - ahora el click se maneja en la celda completa
                 >
                   <span className="text-xl">{icon}</span>
+                  {/* Badge verde si tiene contenido generado */}
+                  {contentGenerated && (
+                    <span
+                      className="absolute -top-1 -right-1 bg-green-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs font-bold"
+                      title="Content generated"
+                    >
+                      ✓
+                    </span>
+                  )}
                  {/* <span className="truncate">{dayContent.title}</span> */}
                 </div>
               )
@@ -1491,6 +1631,90 @@ export default function PlanificadorPage() {
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                             <span className="ml-2 text-gray-600">Verifying content...</span>
                           </div>
+                        ) : currentDayContent && currentDayContent.file_path ? (
+                          // SI HAY ARCHIVO: Mostrar reproductor de video/imagen según file_type
+                          <div className="bg-white rounded-lg p-6 border border-gray-200">
+                            <div className="flex items-center gap-2 mb-4">
+                              <div className="text-2xl">{getContentIcon(selectedTheme.dayContent.type)}</div>
+                              <h3 className="font-semibold text-blue-900">
+                                {isVideoFile(currentDayContent.file_path, currentDayContent.file_type) ? 'Video Generated' : 'Image Generated'}
+                              </h3>
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                currentDayContent.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                currentDayContent.status === 'generating' ? 'bg-yellow-100 text-yellow-800' :
+                                currentDayContent.status === 'failed' ? 'bg-red-100 text-red-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {currentDayContent.status || 'Unknown'}
+                              </span>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-4">
+                              {/* Renderizar video o imagen según file_type */}
+                              {(() => {
+                                const videoUrl = `${config.api.google}/uploads/${currentDayContent.file_path}`
+                                const mimeType = currentDayContent.file_type?.startsWith('video/')
+                                  ? currentDayContent.file_type
+                                  : `video/${currentDayContent.file_type || 'mp4'}`
+
+                                console.log('🎥 Video Debug:', {
+                                  videoUrl,
+                                  mimeType,
+                                  file_path: currentDayContent.file_path,
+                                  file_type: currentDayContent.file_type,
+                                  isVideo: isVideoFile(currentDayContent.file_path, currentDayContent.file_type)
+                                })
+
+                                return null
+                              })()}
+                              {isVideoFile(currentDayContent.file_path, currentDayContent.file_type) ? (
+                                <video
+                                  controls
+                                  className="w-full max-h-96 rounded-lg"
+                                  preload="metadata"
+                                  onError={(e) => {
+                                    console.error('❌ Video Error:', {
+                                      error: e,
+                                      currentTarget: e.currentTarget,
+                                      networkState: e.currentTarget.networkState,
+                                      readyState: e.currentTarget.readyState,
+                                      src: e.currentTarget.currentSrc
+                                    })
+                                  }}
+                                  onLoadedMetadata={(e) => {
+                                    console.log('✅ Video Loaded:', {
+                                      duration: e.currentTarget.duration,
+                                      videoWidth: e.currentTarget.videoWidth,
+                                      videoHeight: e.currentTarget.videoHeight
+                                    })
+                                  }}
+                                >
+                                  <source
+                                    src={`${config.api.google}/uploads/${currentDayContent.file_path}`}
+                                    type={currentDayContent.file_type?.startsWith('video/') ? currentDayContent.file_type : `video/${currentDayContent.file_type || 'mp4'}`}
+                                  />
+                                  Your browser does not support video playback.
+                                </video>
+                              ) : (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={`${config.api.google}/uploads/${currentDayContent.file_path}`}
+                                  alt="Generated content"
+                                  className="w-full max-h-96 object-contain rounded-lg"
+                                />
+                              )}
+                              <div className="mt-4 text-xs text-gray-600 space-y-1">
+                                <p><strong>File:</strong> {currentDayContent.file_path}</p>
+                                <p><strong>Type:</strong> {currentDayContent.file_type || 'Unknown'}</p>
+                                <p><strong>Status:</strong> {currentDayContent.status}</p>
+                                {currentDayContent.created_at && (
+                                  <p><strong>Created:</strong> {new Date(currentDayContent.created_at).toLocaleString()}</p>
+                                )}
+                                {currentDayContent.published_at && (
+                                  <p><strong>Published:</strong> {new Date(currentDayContent.published_at).toLocaleString()}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         ) : (
                           // SI NO HAY ARCHIVO O currentDayContent es null: Mostrar solo Vista Previa conceptual + Botón Generar
                           <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6 border border-purple-200">
@@ -1617,7 +1841,7 @@ export default function PlanificadorPage() {
                         </div>
                       </div>
                     </div>
-                  </>
+                     </>
                 ) : (
                   // Mostrar detalles de la temática completa
                   <>
@@ -1640,7 +1864,7 @@ export default function PlanificadorPage() {
               </div>
             </div>
           </div>
-          )
+        )
         })()}
 
         {/* Información sobre diferenciación de días y colores por temática */}

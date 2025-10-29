@@ -162,7 +162,15 @@ async def get_random_staff_with_analysis(
         "name": "Raphaela Costa",
         "position": "Insurance agent",
         "image": "realistic/generated_image_xxx.png",
-        "description": "{\"physical\": {...}, \"prompt_templates\": {...}}"
+        "description": {
+          "physical": {
+            "gender": "female",
+            "age_range": "40s",
+            "hair": {...},
+            "eyes": {...}
+          },
+          "prompt_templates": {...}
+        }
       }
     }
     ```
@@ -197,6 +205,13 @@ async def get_random_staff_with_analysis(
             # Para "video_person", "cta_post" y cualquier otro tipo
             selected_image = employee.image_url_2  # Foto realista (DEFAULT)
 
+        # Parsear description como JSON object
+        try:
+            import json
+            description_obj = json.loads(employee.description) if employee.description else {}
+        except (json.JSONDecodeError, TypeError):
+            description_obj = {}
+
         return {
             "success": True,
             "employee": {
@@ -204,7 +219,7 @@ async def get_random_staff_with_analysis(
                 "name": employee.name,
                 "position": employee.position,
                 "image": selected_image,  # ✅ CAMPO ÚNICO CON IMAGEN SELECCIONADA
-                "description": employee.description,
+                "description": description_obj,  # ✅ DEVUELVE COMO OBJETO JSON
             }
         }
     except Exception as e:

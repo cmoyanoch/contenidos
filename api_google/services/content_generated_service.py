@@ -94,7 +94,7 @@ class ContentGeneratedService:
 
     def get_file_url(self, file_path: str) -> str:
         """Convierte ruta de archivo a URL del API"""
-        return f"http://api_google:8000/api/v1/uploads/{file_path}"
+        return f"http://api_google:8000/uploads/{file_path}"
 
     def create_content_record(
         self,

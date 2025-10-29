@@ -163,6 +163,7 @@ async def list_content_generated(
     status: Optional[str] = Query(None),
     day_of_week: Optional[int] = Query(None),
     content_type: Optional[str] = Query(None),
+    scheduled_date: Optional[str] = Query(None, description="Fecha programada en formato YYYY-MM-DD"),
     db: Session = Depends(get_database_session)
 ):
     """Listar contenido generado con filtros opcionales"""
@@ -179,6 +180,14 @@ async def list_content_generated(
             filters['day_of_week'] = day_of_week
         if content_type:
             filters['content_type'] = content_type
+
+        # Filtro especial para scheduled_date (necesita conversión a date)
+        if scheduled_date:
+            try:
+                date_obj = date.fromisoformat(scheduled_date)
+                filters['scheduled_date'] = date_obj
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Formato de fecha inválido: {scheduled_date}. Use YYYY-MM-DD")
 
         # Obtener contenido (implementar filtros en el servicio)
         content_list = db.query(ContentGenerated).filter_by(**filters).all()

@@ -359,3 +359,58 @@ class ContinuityGenerationResponse(BaseModel):
     visual_style_preserved: Optional[str] = Field(None, description="Estilo visual preservado")
     content_themes_preserved: Optional[List[str]] = Field(None, description="Temas de contenido preservados")
     mood_and_tone_preserved: Optional[str] = Field(None, description="Estado de ánimo y tono preservados")
+
+    class Config:
+        from_attributes = True
+
+
+# === SCHEMAS PARA GENERACIÓN DE IMÁGENES CORRELACIONADAS ===
+
+class SceneData(BaseModel):
+    """Datos de una escena individual"""
+    sceneIndex: int = Field(..., description="Índice de la escena")
+    prompt: str = Field(..., description="Prompt completo de la escena")
+    fileName: str = Field(..., description="Nombre del archivo de referencia")
+    isFirstScene: bool = Field(..., description="Si es la primera escena")
+    negative_prompt: str = Field(..., description="Prompt negativo para evitar elementos")
+    previousSceneIndex: int = Field(..., description="Índice de la escena anterior")
+
+class CorrelatedImagesRequest(BaseModel):
+    """Request para generar imágenes correlacionadas desde escenas"""
+    base_image_base64: Optional[str] = Field(None, description="Imagen base64 de referencia")
+    base_image_url: Optional[str] = Field(None, description="URL de imagen de referencia (ruta local o URL remota)")
+    mime_type: str = Field(default="image/png", description="Tipo MIME de la imagen")
+    scenes: List[SceneData] = Field(..., description="Lista de escenas con prompts")
+    aspect_ratio: str = Field(default="16:9", description="Relación de aspecto")
+    character_style: str = Field(default="realistic", description="Estilo del personaje")
+    temperature: float = Field(default=0.7, description="Temperatura para generación")
+    max_output_tokens: int = Field(default=2048, description="Máximo tokens de salida")
+
+    class Config:
+        # Validación personalizada para asegurar que se proporcione al menos una imagen
+        @validator('base_image_base64', 'base_image_url')
+        def validate_image_source(cls, v, values):
+            # Si se está validando base_image_url, verificar que al menos una imagen esté presente
+            if 'base_image_base64' in values and values['base_image_base64'] is None and v is None:
+                raise ValueError('Debe proporcionar base_image_base64 o base_image_url')
+            return v
+
+class SceneWithImages(BaseModel):
+    """Escena con imágenes generadas"""
+    sceneIndex: int = Field(..., description="Índice de la escena")
+    prompt: str = Field(..., description="Prompt completo de la escena")
+    fileName: str = Field(..., description="Nombre del archivo de referencia")
+    start_image: str = Field(..., description="Ruta de la imagen de inicio")
+    end_image: str = Field(..., description="Ruta de la imagen de final")
+    isFirstScene: bool = Field(..., description="Si es la primera escena")
+    negative_prompt: str = Field(..., description="Prompt negativo para evitar elementos")
+    previousSceneIndex: int = Field(..., description="Índice de la escena anterior")
+
+class CorrelatedImagesResponse(BaseModel):
+    """Response para generación de imágenes correlacionadas"""
+    success: bool = Field(..., description="Estado de la operación")
+    scenes: List[SceneWithImages] = Field(..., description="Escenas con imágenes generadas")
+
+
+    class Config:
+        from_attributes = True

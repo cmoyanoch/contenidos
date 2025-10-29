@@ -117,29 +117,50 @@ async def serve_icons(icon_path: str):
         logger.error(f"Error serving icon: {e}")
         raise HTTPException(status_code=500, detail=f"Error serving icon: {str(e)}")
 
-# Endpoint para servir imágenes del staff (genérico, debe estar DESPUÉS de endpoints específicos)
-@app.get("/uploads/{image_path:path}")
-async def serve_images(image_path: str):
-    """Servir imágenes desde /app/uploads/banana/"""
+# Endpoint para servir archivos multimedia (imágenes y videos) (genérico, debe estar DESPUÉS de endpoints específicos)
+@app.get("/uploads/{file_path:path}")
+async def serve_media_files(file_path: str):
+    """Servir archivos multimedia (imágenes, videos) desde /app/uploads/"""
     try:
-        file_path = Path(f"/app/uploads/banana/{image_path}")
+        full_path = Path(f"/app/uploads/{file_path}")
 
-        if not file_path.exists():
-            raise HTTPException(status_code=404, detail=f"Image not found: {image_path}")
+        if not full_path.exists():
+            raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
 
-        if not file_path.is_file():
+        if not full_path.is_file():
             raise HTTPException(status_code=400, detail="Path is not a file")
 
+        # Determinar media type basado en extensión
+        media_type = "application/octet-stream"  # default
+        if file_path.endswith(('.jpg', '.jpeg')):
+            media_type = "image/jpeg"
+        elif file_path.endswith('.png'):
+            media_type = "image/png"
+        elif file_path.endswith('.gif'):
+            media_type = "image/gif"
+        elif file_path.endswith('.svg'):
+            media_type = "image/svg+xml"
+        elif file_path.endswith('.webp'):
+            media_type = "image/webp"
+        elif file_path.endswith(('.mp4', '.m4v')):
+            media_type = "video/mp4"
+        elif file_path.endswith('.webm'):
+            media_type = "video/webm"
+        elif file_path.endswith('.avi'):
+            media_type = "video/avi"
+        elif file_path.endswith('.mov'):
+            media_type = "video/quicktime"
+
         return FileResponse(
-            path=str(file_path),
-            media_type="image/png",
-            filename=file_path.name
+            path=str(full_path),
+            media_type=media_type,
+            filename=full_path.name
         )
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error serving image: {e}")
-        raise HTTPException(status_code=500, detail=f"Error serving image: {str(e)}")
+        logger.error(f"Error serving media file: {e}")
+        raise HTTPException(status_code=500, detail=f"Error serving media file: {str(e)}")
 
 # Incluir routers
 app.include_router(health_router, prefix="/health", tags=["health"])
@@ -152,6 +173,9 @@ app.include_router(rate_limiting_router, tags=["rate-limiting"])
 app.include_router(image_formats_router)
 app.include_router(staff_router, tags=["staff"])
 app.include_router(branding_router, tags=["branding"])
+
+# Montar archivos estáticos para servir videos e imágenes
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):

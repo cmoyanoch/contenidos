@@ -400,7 +400,7 @@ export default function FormatsPage() {
             </div>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-sm text-gray-600">Uso Total</div>
+            <div className="text-sm text-gray-600">Total Use</div>
             <div className="text-2xl font-bold text-purple-600">
               {currentFormats.reduce((sum, f) => sum + f.usage_count, 0)}
             </div>
@@ -637,7 +637,7 @@ export default function FormatsPage() {
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-sm text-blue-800">
                       <strong>ℹ️ Note:</strong> Description, use case, category and tags will be generated automatically
-                      from file analysis. You don't need to complete them manually.
+                      from file analysis. You don&apos;t need to complete them manually.
                     </p>
                   </div>
 

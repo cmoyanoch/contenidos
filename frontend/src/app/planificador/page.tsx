@@ -45,6 +45,8 @@ interface ContentGenerated {
   published_at: string | null
   created_at: string
   updated_at: string
+  caption: string | null
+  hashtags: string[] | null
 }
 
 // Función para ajustar fechas a días hábiles (misma lógica que use-themes.ts)
@@ -137,7 +139,7 @@ export default function PlanificadorPage() {
 
       const data = await response.json()
       setGeneratedContents(data)
-      console.log('✅ Contenidos generados cargados:', data.length)
+
     } catch (error) {
       console.error('❌ Error cargando contenidos generados:', error)
     }
@@ -184,7 +186,10 @@ export default function PlanificadorPage() {
         content.scheduled_date === normalizedDate &&
         content.content_type === contentType &&
         content.file_path !== null &&
-        content.file_path !== ''
+        content.file_path !== '' &&
+        content.caption !== null &&
+        content.caption !== '' &&
+        content.hashtags !== null
     )
   }
 
@@ -207,7 +212,6 @@ export default function PlanificadorPage() {
       // Usar scheduled_date en lugar de day_of_week
       const url = buildApiUrl(`/api/v1/content-generated/?theme_id=${themeId}&scheduled_date=${normalizedDate}&content_type=${dbContentType}`)
 
-      console.log('🔍 loadCurrentDayContent request:', { themeId, scheduledDate: normalizedDate, contentType, url })
 
       const response = await fetch(url)
       if (!response.ok) {
@@ -221,30 +225,8 @@ export default function PlanificadorPage() {
 
       // Obtener solo el primer resultado (debería ser único)
       const dayContent = data.length > 0 ? data[0] : null
-      console.log('🔍 loadCurrentDayContent resultado:', {
-        themeId,
-        scheduledDate: normalizedDate,
-        contentType,
-        dataLength: data.length,
-        dayContent,
-        hasFile: dayContent?.file_path ? 'SÍ' : 'NO',
-        fileType: dayContent?.file_type,
-        isVideo: dayContent ? isVideoFile(dayContent.file_path, dayContent.file_type) : false,
-        contentId: dayContent?.id || 'NO ENCONTRADO'
-      })
-      setCurrentDayContent(dayContent)
 
-      // Log adicional para debug del modal
-      if (dayContent && dayContent.file_path) {
-        console.log('✅ CONTENIDO CON ARCHIVO DETECTADO:', {
-          file_path: dayContent.file_path,
-          file_type: dayContent.file_type,
-          full_url: `${config.api.google}/uploads/${dayContent.file_path}`,
-          will_show_video: isVideoFile(dayContent.file_path, dayContent.file_type)
-        })
-      } else {
-        console.log('⚠️ NO HAY ARCHIVO - Se mostrará vista conceptual')
-      }
+      setCurrentDayContent(dayContent)
 
 
       return dayContent
@@ -340,14 +322,9 @@ export default function PlanificadorPage() {
       selectedTheme.dayContent.type
     )
 
-
-
     setIsGenerating(true)
 
     try {
-
-
-      // Llamar DIRECTAMENTE al webhook de N8N para generar contenido
 
       // Convertir hora sugerida a formato TIME (HH:MM:SS)
       const parseTimeTo24Hour = (timeString: string) => {
@@ -409,7 +386,6 @@ export default function PlanificadorPage() {
       // Usar la fecha del día seleccionado en el calendario, no la fecha de inicio de la temática
       const selectedDate = selectedTheme.selectedDate || selectedTheme.startDate
 
-
       const payload = {
         // ID del registro en content_generated (si existe)
         content_generated_id: loadedContent?.id || currentDayContent?.id || null,
@@ -438,10 +414,6 @@ export default function PlanificadorPage() {
         // Flags
         is_active: true
       }
-
-
-
-
 
       const response = await fetch(buildN8nWebhookUrl(config.webhooks.planificador), {
         method: 'POST',
@@ -545,86 +517,6 @@ export default function PlanificadorPage() {
       alert('Theme created successfully!')
     } catch (error) {
       alert('Error creating theme')
-    }
-  }
-
-  // Función para sincronizar con N8N
-  const syncWithN8N = async () => {
-    if (themes.length === 0) {
-      alert('No themes to sync')
-      return
-    }
-
-    setSyncStatus('🔄 Syncing with N8N...')
-
-    try {
-      // Preparar datos completos de temáticas para N8N
-      const themesData = themes.map(theme => ({
-        id: theme.id,
-        name: theme.themeName,
-        description: theme.themeDescription,
-        start_date: theme.startDate,
-        end_date: theme.endDate,
-        created_at: theme.createdAt,
-        // Información de días de la semana
-        weekly_schedule: {
-          monday: { type: 'video_person', title: 'Video with Realistic Person', time: '10:00' },
-          tuesday: { type: 'image_stats', title: 'Image with Statistics', time: '11:00' },
-          wednesday: { type: 'video_avatar', title: 'Animated Avatar Video', time: '13:00' },
-          thursday: { type: 'cta_post', title: 'Post with CTA', time: '14:00' },
-          friday: { type: 'manual', title: 'Manual Content', time: '15:00' }
-        }
-      }))
-
-
-      // Llamar DIRECTAMENTE al webhook de N8N para sincronizar
-      // Usar configuración centralizada
-
-      const response = await fetch(buildN8nWebhookUrl('content-scheduler-sync'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'sync_all_themes',
-          themes: themesData,
-          timestamp: new Date().toISOString(),
-          workflow_type: 'content_scheduler'
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`)
-      }
-
-      const result = await response.json()
-
-
-      setSyncStatus('✅ Sync completed')
-      setTimeout(() => setSyncStatus(''), config.app.timeout)
-
-      // Mostrar resumen de sincronización
-      alert(`✅ Sync completed:\n- ${themesData.length} themes synchronized\n- N8N workflow activated successfully`)
-
-    } catch (error) {
-      console.error('Error sincronizando con N8N:', error)
-      setSyncStatus('❌ Sync error')
-      setTimeout(() => setSyncStatus(''), config.app.timeout)
-      alert(`❌ Sync error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    }
-  }
-
-  // Función para abrir logs de N8N en nueva pestaña
-  const loadN8nLogs = async () => {
-    try {
-      // Abrir la interfaz de N8N en una nueva pestaña
-      window.open(`${config.services.n8n}/workflow`, '_blank')
-
-      alert('ℹ️ N8N interface will open where you can see all workflows and their executions')
-
-    } catch (error) {
-      console.error('Error abriendo N8N:', error)
-      alert(`❌ Error opening N8N: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -904,7 +796,6 @@ export default function PlanificadorPage() {
   const events = generateCalendarEvents(themes)
 
 
-
   // ✅ Mostrar error si existe
   if (error) {
     console.error('❌ Error en planificador:', error)
@@ -1079,16 +970,6 @@ export default function PlanificadorPage() {
           </div>
           </div>
         </div>
-
-        {/* N8N sync status */}
-        {syncStatus && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center">
-              <span className="text-blue-600 mr-2">🔄</span>
-              <span className="text-blue-800 font-medium">{syncStatus}</span>
-            </div>
-          </div>
-        )}
 
         {/* Message when no events */}
         {events.length === 0 && themes.length === 0 && (
@@ -1525,10 +1406,9 @@ export default function PlanificadorPage() {
         {/* Modal de detalles de contenido diario */}
         {selectedTheme && (() => {
 
-
           return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
-              <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full mt-8">
+              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mt-8">
               <div className="border-b border-gray-200 p-6">
                 <div className="flex justify-between items-start">
                   <div>
@@ -1557,11 +1437,11 @@ export default function PlanificadorPage() {
                 </div>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="px-8 pb-8 space-y-4">
                 {selectedTheme.dayContent ? (
                   // Mostrar detalles del contenido diario
                   <>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 hidden">
                     <div
                       className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => setShowContentStatus(!showContentStatus)}
@@ -1648,7 +1528,7 @@ export default function PlanificadorPage() {
                                 {currentDayContent.status || 'Unknown'}
                               </span>
                             </div>
-                            <div className="bg-gray-50 rounded-lg p-4">
+                            <div className="bg-gray-50 rounded-lg py-6 px-9">
                               {/* Renderizar video o imagen según file_type */}
                               {(() => {
                                 const videoUrl = `${config.api.google}/uploads/${currentDayContent.file_path}`
@@ -1656,13 +1536,6 @@ export default function PlanificadorPage() {
                                   ? currentDayContent.file_type
                                   : `video/${currentDayContent.file_type || 'mp4'}`
 
-                                console.log('🎥 Video Debug:', {
-                                  videoUrl,
-                                  mimeType,
-                                  file_path: currentDayContent.file_path,
-                                  file_type: currentDayContent.file_type,
-                                  isVideo: isVideoFile(currentDayContent.file_path, currentDayContent.file_type)
-                                })
 
                                 return null
                               })()}
@@ -1681,11 +1554,7 @@ export default function PlanificadorPage() {
                                     })
                                   }}
                                   onLoadedMetadata={(e) => {
-                                    console.log('✅ Video Loaded:', {
-                                      duration: e.currentTarget.duration,
-                                      videoWidth: e.currentTarget.videoWidth,
-                                      videoHeight: e.currentTarget.videoHeight
-                                    })
+
                                   }}
                                 >
                                   <source
@@ -1702,8 +1571,32 @@ export default function PlanificadorPage() {
                                   className="w-full max-h-96 object-contain rounded-lg"
                                 />
                               )}
-                              <div className="mt-4 text-xs text-gray-600 space-y-1">
-                                <p><strong>File:</strong> {currentDayContent.file_path}</p>
+                              <div className="mt-4 text-sm space-y-3">
+                                {/* Caption */}
+                                {currentDayContent.caption && (
+                                  <div className="bg-gray-50 p-3 rounded-lg">
+                                    <p className="font-semibold text-gray-700 mb-1">Caption:</p>
+                                    <p className="text-gray-600 italic">{currentDayContent.caption}</p>
+                                  </div>
+                                )}
+
+                                {/* Hashtags */}
+                                {currentDayContent.hashtags && currentDayContent.hashtags.length > 0 && (
+                                  <div className="bg-blue-50 p-3 rounded-lg">
+                                    <p className="font-semibold text-gray-700 mb-2">Hashtags:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {currentDayContent.hashtags.map((tag, index) => (
+                                        <span
+                                          key={index}
+                                          className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium"
+                                        >
+                                          {tag}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {/* <p><strong>File:</strong> {currentDayContent.file_path}</p>
                                 <p><strong>Type:</strong> {currentDayContent.file_type || 'Unknown'}</p>
                                 <p><strong>Status:</strong> {currentDayContent.status}</p>
                                 {currentDayContent.created_at && (
@@ -1712,6 +1605,25 @@ export default function PlanificadorPage() {
                                 {currentDayContent.published_at && (
                                   <p><strong>Published:</strong> {new Date(currentDayContent.published_at).toLocaleString()}</p>
                                 )}
+                                  */}
+                                <p><button
+                                onClick={handleGenerateContent}
+                                disabled={isGenerating}
+                                className={`px-6 py-2 rounded-lg transition-colors ${
+                                  isGenerating
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-blue-600 hover:bg-blue-700'
+                                } text-white`}
+                              >
+                                {isGenerating ? (
+                                  <>
+                                    <span className="inline-block animate-spin mr-2">⏳</span>
+                                    Generating...
+                                  </>
+                                ) : (
+                                  <> 🔄 ReGenerate Content</>
+                                )}
+                              </button></p>
                               </div>
                             </div>
                           </div>

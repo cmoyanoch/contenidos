@@ -219,8 +219,8 @@ export const useThemes = () => {
     const diffTime = end.getTime() - start.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-    // Validar rango mínimo (1 semana) y máximo (3 meses)
-    if (diffDays < 7) {
+    // Validar rango mínimo (1 dia) y máximo (3 meses)
+    if (diffDays < 1) {
       return { valid: false, message: 'Minimum range is 1 week' }
     }
 

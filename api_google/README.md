@@ -244,3 +244,79 @@ Para soporte técnico o preguntas:
 ---
 
 *Desarrollado con ❤️ usando FastAPI y Google Veo 3.0*
+
+
+
+
+NEXT_PUBLIC_API_RRSS_URL=https://api-rrss.srv1004950.hstgr.cloud
+
+
+# N8N
+NEXT_PUBLIC_N8N_URL=http://n8n:5678
+NEXT_PUBLIC_N8N_WEBHOOK_URL=http://n8n:5678/webhook
+
+
+# Configuración del Frontend para producción
+NODE_ENV=production
+
+# URLs de APIs (usando nombres de contenedores Docker)
+NEXT_PUBLIC_API_URL=http://api_google:8000
+NEXT_PUBLIC_API_RRSS_URL=http://api_rrss:8002
+
+# URLs de servicios (usando nombres de contenedores Docker)
+NEXT_PUBLIC_N8N_URL=http://n8n:5678
+NEXT_PUBLIC_N8N_WEBHOOK_URL=http://n8n:5678/webhook
+NEXT_PUBLIC_PGADMIN_URL=http://pgadmin:80
+NEXT_PUBLIC_FLOWER_URL=http://flower:5555
+
+# URLs de archivos
+NEXT_PUBLIC_UPLOADS_URL=http://api_google:8000/uploads
+NEXT_PUBLIC_ICONS_URL=http://api_google:8000/uploads/icons
+
+# Base de datos
+DATABASE_URL=postgresql://postgres:password@db:5432/frontend_db
+
+# NextAuth
+NEXTAUTH_SECRET=your-secret-key-here
+NEXTAUTH_URL=https://n8n.srv1004950.hstgr.cloud
+
+# Configuración de archivos
+NEXT_PUBLIC_MAX_FILE_SIZE=10485760
+NEXT_PUBLIC_ALLOWED_FILE_TYPES=image/jpeg,image/png,image/webp
+
+NEXT_PUBLIC_API_RRSS_URL=https://api-rrss.srv1004950.hstgr.cloud
+
+
+# N8N
+NEXT_PUBLIC_N8N_URL=http://n8n:5678
+NEXT_PUBLIC_N8N_WEBHOOK_URL=http://n8n:5678/webhook
+
+
+
+# Configuración del Frontend para producción
+NODE_ENV=production
+
+# URLs de APIs (usando nombres de contenedores Docker)
+NEXT_PUBLIC_API_URL=http://api_google:8000
+NEXT_PUBLIC_API_RRSS_URL=http://api_rrss:8002
+
+# URLs de servicios (usando nombres de contenedores Docker)
+NEXT_PUBLIC_N8N_URL=http://n8n:5678
+NEXT_PUBLIC_N8N_WEBHOOK_URL=http://n8n:5678/webhook
+NEXT_PUBLIC_PGADMIN_URL=http://pgadmin:80
+NEXT_PUBLIC_FLOWER_URL=http://flower:5555
+
+# URLs de archivos
+NEXT_PUBLIC_UPLOADS_URL=http://api_google:8000/uploads
+NEXT_PUBLIC_ICONS_URL=http://api_google:8000/uploads/icons
+
+# Base de datos
+DATABASE_URL=postgresql://postgres:password@db:5432/frontend_db
+
+# NextAuth
+NEXTAUTH_SECRET=your-secret-key-here
+NEXTAUTH_URL=https://n8n.srv1004950.hstgr.cloud
+
+# Configuración de archivos
+NEXT_PUBLIC_MAX_FILE_SIZE=10485760
+NEXT_PUBLIC_ALLOWED_FILE_TYPES=image/jpeg,image/png,image/webp

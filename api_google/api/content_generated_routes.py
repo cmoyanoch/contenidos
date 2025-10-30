@@ -50,6 +50,8 @@ class ContentGenerated(Base):
     published_at = Column(DateTime)
     created_at = Column(DateTime)
     updated_at = Column(DateTime)
+    caption = Column(Text)
+    hashtags = Column(ARRAY(String(100)), default=[])
 
 # Importar servicio simplificado
 from services.content_generated_service import ContentGeneratedService
@@ -94,6 +96,8 @@ class ContentGeneratedResponse(BaseModel):
     published_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
+    caption: Optional[str] = None
+    hashtags: Optional[List[str]] = None
     file_url: Optional[str] = None
 
     class Config:
@@ -147,6 +151,8 @@ async def create_content_generated(
             published_at=content.published_at,
             created_at=content.created_at,
             updated_at=content.updated_at,
+            caption=content.caption,
+            hashtags=content.hashtags,
             file_url=service.get_file_url(content.file_path) if content.file_path else None
         )
 
@@ -214,6 +220,8 @@ async def list_content_generated(
                 published_at=content.published_at,
                 created_at=content.created_at,
                 updated_at=content.updated_at,
+                caption=content.caption,
+                hashtags=content.hashtags,
                 file_url=service.get_file_url(content.file_path) if content.file_path else None
             )
             responses.append(response)
@@ -257,6 +265,8 @@ async def get_content_generated(
             published_at=content.published_at,
             created_at=content.created_at,
             updated_at=content.updated_at,
+            caption=content.caption,
+            hashtags=content.hashtags,
             file_url=service.get_file_url(content.file_path) if content.file_path else None
         )
 
@@ -311,6 +321,8 @@ async def update_content_generated(
             published_at=content.published_at,
             created_at=content.created_at,
             updated_at=content.updated_at,
+            caption=content.caption,
+            hashtags=content.hashtags,
             file_url=service.get_file_url(content.file_path) if content.file_path else None
         )
 
@@ -394,6 +406,8 @@ async def get_scheduled_content(
                 published_at=content.published_at,
                 created_at=content.created_at,
                 updated_at=content.updated_at,
+                caption=content.caption,
+                hashtags=content.hashtags,
                 file_url=service.get_file_url(content.file_path) if content.file_path else None
             )
             responses.append(response)

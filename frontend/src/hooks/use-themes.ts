@@ -210,18 +210,18 @@ export const useThemes = () => {
       return { valid: false, message: 'Start date cannot be in the past' }
     }
 
-    // Validar que la fecha de fin sea posterior a la de inicio
-    if (end <= start) {
-      return { valid: false, message: 'End date must be after start date' }
+    // Validar que la fecha de fin no sea anterior a la fecha de inicio (permite mismo día)
+    if (end < start) {
+      return { valid: false, message: 'End date cannot be before start date' }
     }
 
     // Calcular diferencia en días
     const diffTime = end.getTime() - start.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-    // Validar rango mínimo (1 dia) y máximo (3 meses)
-    if (diffDays < 1) {
-      return { valid: false, message: 'Minimum range is 1 week' }
+    // Validar rango máximo (3 meses) - Permite 0 días (mismo día)
+    if (diffDays < 0) {
+      return { valid: false, message: 'Invalid date range' }
     }
 
     if (diffDays > 90) {

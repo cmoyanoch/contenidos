@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Usuario no encontrado' },
+        { error: 'User not found' },
         { status: 404 }
       )
     }
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching themes:', error)
     return NextResponse.json(
-      { error: 'Error al obtener temáticas' },
+      { error: 'Error fetching themes' },
       { status: 500 }
     )
   }
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user?.email) {
       return NextResponse.json(
-        { error: 'No autorizado' },
+        { error: 'Unauthorized' },
         { status: 401 }
       )
     }
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Usuario no encontrado' },
+        { error: 'User not found' },
         { status: 404 }
       )
     }
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     // Validaciones básicas
     if (!themeName || !startDate || !endDate) {
       return NextResponse.json(
-        { error: 'Faltan campos requeridos' },
+        { error: 'Missing required fields' },
         { status: 400 }
       )
     }
@@ -95,14 +95,14 @@ export async function POST(request: NextRequest) {
 
     if (start < today) {
       return NextResponse.json(
-        { error: 'La fecha de inicio no puede ser en el pasado' },
+        { error: 'The start date cannot be in the past.' },
         { status: 400 }
       )
     }
 
-    if (end <= start) {
+    if (end < start) {
       return NextResponse.json(
-        { error: 'La fecha de fin debe ser posterior a la de inicio' },
+        { error: 'The end date cannot be before the start date.' },
         { status: 400 }
       )
     }
@@ -110,16 +110,17 @@ export async function POST(request: NextRequest) {
     const diffTime = end.getTime() - start.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-    if (diffDays < 7) {
+    // Permite 0 días (mismo día) - Solo valida que no sea negativo
+    if (diffDays < 0) {
       return NextResponse.json(
-        { error: 'El rango mínimo es de 1 semana' },
+        { error: 'Invalid date range.' },
         { status: 400 }
       )
     }
 
     if (diffDays > 90) {
       return NextResponse.json(
-        { error: 'El rango máximo es de 3 meses' },
+        { error: 'The maximum range is 3 months.' },
         { status: 400 }
       )
     }
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
 
     if (existingThemes.length > 0) {
       return NextResponse.json(
-        { error: 'Ya existe una temática en ese rango de fechas' },
+        { error: 'A theme already exists within that date range.' },
         { status: 400 }
       )
     }
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
 
     // 🎯 NUEVO: Crear contenido automáticamente (sin webhook)
     try {
-      console.log('🎯 Creando contenido automático para temática:', newTheme.id)
+      console.log('🎯 Automatic content creation for the theme:', newTheme.id)
 
       const contentRecords = []
       const startDate = new Date(newTheme.startDate)
@@ -239,23 +240,23 @@ export async function POST(request: NextRequest) {
             })
 
             contentRecords.push(contentRecord)
-            console.log(`✅ Contenido creado para día ${dayOfWeekJS}:`, dayConfig.contentType)
+            console.log(`✅ Content created for today ${dayOfWeekJS}:`, dayConfig.contentType)
           }
         }
       }
 
-      console.log(`✅ ${contentRecords.length} registros de contenido creados para la temática ${newTheme.themeName}`)
+      console.log(`✅ ${contentRecords.length} content records created for the theme ${newTheme.themeName}`)
 
     } catch (contentError) {
-      console.error('❌ Error creando contenido automático:', contentError)
+      console.error('❌ Error creating automatic content:', contentError)
       // No fallar la creación de temática si el contenido falla
     }
 
     return NextResponse.json(newTheme, { status: 201 })
   } catch (error) {
-    console.error('Error creating theme:', error)
+    console.error('❌ Error creating theme:', error)
     return NextResponse.json(
-      { error: 'Error al crear temática' },
+      { error: '❌ Error creating theme' },
       { status: 500 }
     )
   }
@@ -269,7 +270,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!session?.user?.email) {
       return NextResponse.json(
-        { error: 'No autorizado' },
+        { error: 'Unauthorized' },
         { status: 401 }
       )
     }
@@ -282,7 +283,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Usuario no encontrado' },
+        { error: 'User not found' },
         { status: 404 }
       )
     }
@@ -294,7 +295,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { error: 'ID de temática requerido' },
+        { error: 'Theme ID required' },
         { status: 400 }
       )
     }
@@ -309,7 +310,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!existingTheme) {
       return NextResponse.json(
-        { error: 'Temática no encontrada' },
+        { error: 'Theme not found' },
         { status: 404 }
       )
     }
@@ -322,14 +323,14 @@ export async function DELETE(request: NextRequest) {
     })
 
     return NextResponse.json(
-      { message: 'Temática eliminada exitosamente' },
+      { message: 'Theme deleted successfully' },
       { status: 200 }
     )
 
   } catch (error) {
-    console.error('Error al eliminar temática:', error)
+    console.error('Error deleting theme:', error)
     return NextResponse.json(
-      { error: 'Error al eliminar temática' },
+      { error: 'Error deleting theme' },
       { status: 500 }
     )
   }

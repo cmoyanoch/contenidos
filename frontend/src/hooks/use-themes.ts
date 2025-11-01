@@ -2,6 +2,17 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+export interface ContentGenerated {
+  id: string
+  content_type: string
+  scheduled_date: string
+  day_of_week: number
+  format_id: number | null
+  image_format_id: number | null
+  format_type: string
+  is_primary: boolean
+}
+
 export interface ThemePlanning {
   id: string
   userId: string
@@ -11,6 +22,7 @@ export interface ThemePlanning {
   endDate: string
   createdAt: string
   updatedAt: string
+  content_generated?: ContentGenerated[] // 🆕 Array de contenido generado de la DB
 }
 
 export interface CreateThemeData {
@@ -18,6 +30,10 @@ export interface CreateThemeData {
   themeDescription?: string
   startDate: string
   endDate: string
+  // 🆕 Para temáticas de un solo día
+  singleDayContentType?: 'video_person' | 'image_stats' | 'video_avatar' | 'cta_post' | 'content_manual'
+  singleDayFormatId?: number
+  singleDayImageFormatId?: number
 }
 
 export interface WeeklySchedule {
@@ -41,6 +57,50 @@ export interface ContentDay {
   networkStrategy?: string
   dayOfWeek?: number // ✅ Agregar dayOfWeek (1=Lunes, 7=Domingo)
 }
+
+// 🆕 Tipos de contenido disponibles para temáticas de un solo día
+export const SINGLE_DAY_CONTENT_TYPES = [
+  {
+    value: 'video_person' as const,
+    label: 'Video with realistic person (24s)',
+    description: 'Generate a 24-second video with a realistic person',
+    formatId: 9,
+    formatType: 'video' as const,
+    icon: '👤'
+  },
+  {
+    value: 'video_avatar' as const,
+    label: 'Video with animated avatar (24s)',
+    description: 'Produce a 24-second video with an animated avatar (Pixar style)',
+    formatId: 10,
+    formatType: 'video' as const,
+    icon: '🎭'
+  },
+  {
+    value: 'image_stats' as const,
+    label: 'Image with statistics',
+    description: 'Create an image with relevant statistics',
+    imageFormatId: 12,
+    formatType: 'image' as const,
+    icon: '📊'
+  },
+  {
+    value: 'cta_post' as const,
+    label: 'Post with CTA',
+    description: 'Design a post with a call to action',
+    formatId: 11,
+    formatType: 'image' as const,
+    icon: '📢'
+  },
+  {
+    value: 'content_manual' as const,
+    label: 'Manual content',
+    description: 'Reserved space to define content manually',
+    imageFormatId: 13,
+    formatType: 'manual' as const,
+    icon: '✍️'
+  }
+]
 
 // Plantilla semanal predefinida con horarios óptimos y redes sociales recomendadas
 export const WEEKLY_TEMPLATE: WeeklySchedule = {
@@ -110,7 +170,21 @@ export const useThemes = () => {
   const [isMounted, setIsMounted] = useState(false)
   const [hasInitialized, setHasInitialized] = useState(false)
 
-  // Cargar temáticas
+  // 🆕 Función interna para recargar temáticas (sin protección hasInitialized)
+  const reloadThemes = useCallback(async () => {
+    try {
+      const response = await fetch('/api/planificador/themes')
+      if (!response.ok) throw new Error('Error loading themes')
+      const data = await response.json()
+      setThemes(data)
+      console.log('✅ Temáticas recargadas con contenido actualizado')
+    } catch (err) {
+      console.error('❌ useThemes: Error reloading:', err)
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    }
+  }, [])
+
+  // Cargar temáticas (solo primera vez)
   const fetchThemes = useCallback(async () => {
     if (!isMounted || hasInitialized) return // ✅ Doble protección contra hidratación
 
@@ -144,7 +218,10 @@ export const useThemes = () => {
       })
       if (!response.ok) throw new Error('Error creating theme')
       const newTheme = await response.json()
-      setThemes(prev => [...prev, newTheme])
+
+      // 🆕 Recargar todas las temáticas para obtener content_generated actualizado
+      await reloadThemes()
+
       return newTheme
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
@@ -311,50 +388,95 @@ export const useThemes = () => {
         // Obtener el día de la semana (0 = Domingo, 1 = Lunes, etc.)
         const dayOfWeek = currentDate.getDay()
 
-        // Mapear día de la semana a clave de plantilla
-        const dayMapping = {
-          1: 'monday',    // Lunes
-          2: 'tuesday',   // Martes
-          3: 'wednesday', // Miércoles
-          4: 'thursday',  // Jueves
-          5: 'friday',    // Viernes
-          6: 'saturday',  // Sábado
-          0: 'sunday'     // Domingo
-        }
+        // Normalizar fecha actual para comparación (YYYY-MM-DD)
+        const currentDateString = currentDate.toISOString().split('T')[0]
 
-        const dayKey = dayMapping[dayOfWeek as keyof typeof dayMapping]
+        // 🆕 Buscar contenido REAL de la base de datos para esta fecha
+        let dayContent: ContentDay | null = null
+        let eventTitle = ''
 
-        if (dayKey && WEEKLY_TEMPLATE[dayKey as keyof WeeklySchedule]) {
-          const dayContent = WEEKLY_TEMPLATE[dayKey as keyof WeeklySchedule]
+        if (theme.content_generated && theme.content_generated.length > 0) {
+          const contentForDate = theme.content_generated.find(content => {
+            const scheduledDate = new Date(content.scheduled_date).toISOString().split('T')[0]
+            return scheduledDate === currentDateString
+          })
 
-          // Solo mostrar eventos para días laborales (no sábados ni domingos)
-          if (dayContent.type !== 'free') {
-            // Crear título más corto para mejor visualización
-            const eventTitle = dayContent.title
-
-            // Crear evento de todo el día
-            const eventDate = new Date(currentDate)
-            eventDate.setHours(0, 0, 0, 0) // Normalizar a medianoche
-
-            // ✅ Agregar dayOfWeek al dayContent
-            const dayContentWithWeek = {
-              ...dayContent,
-              dayOfWeek: dayOfWeek === 0 ? 7 : dayOfWeek // Convertir 0=Domingo a 7=Domingo
+          if (contentForDate) {
+            // ✅ Usar contenido REAL de la base de datos
+            const contentTypeMapping: Record<string, { title: string, description: string, duration?: number }> = {
+              'video_person': { title: '🎥 Video with realistic person', description: 'Generate a 24-second video with a realistic person', duration: 24 },
+              'video_avatar': { title: '🎭 Video with animated avatar', description: 'Produce a 24-second video with an animated avatar (Pixar style)', duration: 24 },
+              'image_stats': { title: '📊 Image with statistics', description: 'Create a content image with statistics and facts', duration: undefined },
+              'cta_post': { title: '📢 Post with CTA', description: 'Publication with call to action', duration: undefined },
+              'content_manual': { title: '✍️ Manual content', description: 'Content to be created manually', duration: undefined }
             }
 
-            events.push({
-              id: `${theme.id}-${dayKey}-${currentDate.toISOString().split('T')[0]}`,
-              title: eventTitle,
-              start: eventDate,
-              end: eventDate,
-              allDay: true, // true para eventos de todo el día
-              resource: {
-                theme: theme,
-                dayContent: dayContentWithWeek, // ✅ Ahora incluye dayOfWeek
-                dayKey: dayKey
-              }
-            })
+            const mapping = contentTypeMapping[contentForDate.content_type] || {
+              title: contentForDate.content_type,
+              description: contentForDate.content_type
+            }
+
+            dayContent = {
+              type: contentForDate.content_type as 'video_person' | 'image_stats' | 'video_avatar' | 'cta_post' | 'content_manual' | 'free',
+              duration: mapping.duration,
+              description: mapping.description,
+              title: mapping.title,
+              dayOfWeek: dayOfWeek === 0 ? 7 : dayOfWeek
+            }
+            eventTitle = mapping.title
           }
+        }
+
+        // Si no hay contenido de DB, usar WEEKLY_TEMPLATE como fallback
+        if (!dayContent) {
+          const dayMapping = {
+            1: 'monday',    // Lunes
+            2: 'tuesday',   // Martes
+            3: 'wednesday', // Miércoles
+            4: 'thursday',  // Jueves
+            5: 'friday',    // Viernes
+            6: 'saturday',  // Sábado
+            0: 'sunday'     // Domingo
+          }
+
+          const dayKey = dayMapping[dayOfWeek as keyof typeof dayMapping]
+
+          if (dayKey && WEEKLY_TEMPLATE[dayKey as keyof WeeklySchedule]) {
+            dayContent = WEEKLY_TEMPLATE[dayKey as keyof WeeklySchedule]
+            eventTitle = dayContent.title
+          }
+        }
+
+        // Solo crear evento si hay contenido y no es 'free'
+        if (dayContent && dayContent.type !== 'free') {
+          // Crear evento de todo el día
+          const eventDate = new Date(currentDate)
+          eventDate.setHours(0, 0, 0, 0) // Normalizar a medianoche
+
+          // ✅ Agregar dayOfWeek al dayContent si no lo tiene
+          const dayContentWithWeek = {
+            ...dayContent,
+            dayOfWeek: dayContent.dayOfWeek || (dayOfWeek === 0 ? 7 : dayOfWeek)
+          }
+
+          const dayMapping = {
+            1: 'monday', 2: 'tuesday', 3: 'wednesday',
+            4: 'thursday', 5: 'friday', 6: 'saturday', 0: 'sunday'
+          }
+          const dayKey = dayMapping[dayOfWeek as keyof typeof dayMapping] || 'unknown'
+
+          events.push({
+            id: `${theme.id}-${dayKey}-${currentDateString}`,
+            title: eventTitle,
+            start: eventDate,
+            end: eventDate,
+            allDay: true,
+            resource: {
+              theme: theme,
+              dayContent: dayContentWithWeek,
+              dayKey: dayKey
+            }
+          })
         }
 
         // Avanzar al siguiente día
@@ -391,6 +513,13 @@ export const useThemes = () => {
     return distribution
   }
 
+  // 🆕 Verificar si un rango de fechas es de un solo día
+  const isSingleDayTheme = (startDate: string, endDate: string): boolean => {
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    return start.getTime() === end.getTime()
+  }
+
   // Efecto para manejar el montaje del componente
   useEffect(() => {
     // ✅ Delay mínimo para asegurar hidratación completa
@@ -420,6 +549,7 @@ export const useThemes = () => {
     validateDateRange,
     detectConflicts,
     generateCalendarEvents,
-    generateWeeklyDistribution
+    generateWeeklyDistribution,
+    isSingleDayTheme
   }
 }

@@ -182,8 +182,8 @@ export default function CompanyPage() {
 
       const formData = new FormData()
       formData.append('data', staffForm.image)
-      formData.append('nombre', staffForm.name)
-      formData.append('cargo', staffForm.position)
+      formData.append('name', staffForm.name)
+      formData.append('position', staffForm.position)
 
       const response = await fetch(buildN8nWebhookUrl(config.webhooks.staff), {
         method: 'POST',
@@ -208,7 +208,7 @@ export default function CompanyPage() {
 
   // Eliminar staff
   const handleDeleteStaff = async (staffId: number, staffName: string) => {
-    if (!confirm(`¿Estás seguro de eliminar a ${staffName}?`)) {
+    if (!confirm(`Are you sure you want to delete ${staffName}?`)) {
       return
     }
 
@@ -460,7 +460,7 @@ export default function CompanyPage() {
               ) : (
                 <div className="divide-y divide-gray-200">
                   {staff.map((employee) => (
-                    <div key={employee.id} className="p-6 hover:bg-gray-50 transition-colors">
+                    <div key={employee.id} className="p-4 hover:bg-gray-50 transition-colors">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-6">
                           {/* Imagen Original */}
@@ -470,7 +470,7 @@ export default function CompanyPage() {
                               : buildStaffImageUrl(employee.image_url_1)
                             }
                             alt={employee.name}
-                            className="w-32 h-48 object-cover rounded-lg border-2 border-gray-300 shadow-sm"
+                            className="w-16 h-24 object-cover rounded-lg border-2 border-gray-300 shadow-sm"
                             onError={(e) => {
                               const target = e.currentTarget as HTMLImageElement
                               target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96"><rect fill="%23E5E7EB" width="96" height="96"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%239CA3AF" font-family="sans-serif" font-size="14">Sin foto</text></svg>'
@@ -479,11 +479,11 @@ export default function CompanyPage() {
 
                           {/* Información del Empleado */}
                           <div>
-                            <h3 className="text-2xl font-semibold text-gray-900 mb-1">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-1">
                               {employee.name}
                             </h3>
-                            <p className="text-lg text-gray-600">
-                              {employee.position || 'Sin cargo asignado'}
+                            <p className="text-sm text-gray-600">
+                              {employee.position || 'No position assigned'}
                             </p>
                           </div>
                         </div>

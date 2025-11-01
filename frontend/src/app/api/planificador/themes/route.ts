@@ -34,9 +34,27 @@ export async function GET(request: NextRequest) {
     const userId = user.id
 
     // Si es admin, mostrar todas las temáticas. Si es user, solo las propias
+    // 🆕 Incluir content_generated para que el frontend tenga acceso al contenido real
     const themes = await prisma.themePlanning.findMany({
       where: user.role === 'admin' ? {} : { userId },
-      orderBy: { startDate: 'asc' }
+      orderBy: { startDate: 'asc' },
+      include: {
+        content_generated: {
+          select: {
+            id: true,
+            content_type: true,
+            scheduled_date: true,
+            day_of_week: true,
+            format_id: true,
+            image_format_id: true,
+            format_type: true,
+            is_primary: true
+          },
+          orderBy: {
+            scheduled_date: 'asc'
+          }
+        }
+      }
     })
 
     return NextResponse.json(themes)
@@ -78,7 +96,17 @@ export async function POST(request: NextRequest) {
     const userId = user.id
 
     const body = await request.json()
-    const { themeName, themeDescription, startDate, endDate } = body
+    const { themeName, themeDescription, startDate, endDate, singleDayContentType, singleDayFormatId, singleDayImageFormatId } = body
+
+    // 🐛 DEBUG: Log de datos recibidos
+    console.log('📥 Backend recibió:', {
+      themeName,
+      startDate,
+      endDate,
+      singleDayContentType,
+      singleDayFormatId,
+      singleDayImageFormatId
+    })
 
     // Validaciones básicas
     if (!themeName || !startDate || !endDate) {
@@ -178,69 +206,126 @@ export async function POST(request: NextRequest) {
       const startDate = new Date(newTheme.startDate)
       const endDate = new Date(newTheme.endDate)
 
-      // Configuración de contenido por día de la semana
-      const weeklyContentSchedule = {
-        1: { // Lunes
-          contentType: 'video_person',
-          scheduledTime: '10:00:00',
-          socialNetworks: ['instagram', 'facebook'],
-          formatId: 9
-        },
-        2: { // Martes
-          contentType: 'image_stats',
-          scheduledTime: '11:00:00',
-          socialNetworks: ['instagram', 'facebook'],
-          imageFormatId: 12
-        },
-        3: { // Miércoles
-          contentType: 'video_avatar',
-          scheduledTime: '13:00:00',
-          socialNetworks: ['instagram', 'facebook'],
-          formatId: 10
-        },
-        4: { // Jueves
-          contentType: 'cta_post',
-          scheduledTime: '11:30:00',
-          socialNetworks: ['instagram', 'facebook'],
-          formatId: 11
-        },
-        5: { // Viernes
-          contentType: 'content_manual',
-          scheduledTime: '10:00:00',
-          socialNetworks: ['instagram', 'facebook'],
-          imageFormatId: 13
+      // 🆕 Verificar si es temática de un solo día
+      const isSingleDay = startDate.getTime() === endDate.getTime()
+
+      // 🐛 DEBUG: Verificar condiciones
+      console.log('🔍 Verificando condiciones:', {
+        isSingleDay,
+        singleDayContentType,
+        singleDayContentTypeType: typeof singleDayContentType,
+        willUseCustomType: !!(isSingleDay && singleDayContentType)
+      })
+
+      // 🆕 Si es un solo día Y se especificó tipo de contenido personalizado
+      if (isSingleDay && singleDayContentType) {
+        console.log('✅ Usando tipo personalizado:', singleDayContentType)
+
+        const dayOfWeekJS = startDate.getDay()
+
+        // Determinar format_type y IDs según el tipo de contenido
+        let formatType: 'video' | 'image' | 'manual' = 'manual'
+        let formatId = null
+        let imageFormatId = null
+
+        if (singleDayContentType === 'video_person' || singleDayContentType === 'video_avatar') {
+          formatType = 'video'
+          formatId = singleDayFormatId || null
+        } else if (singleDayContentType === 'image_stats') {
+          formatType = 'image'
+          imageFormatId = singleDayImageFormatId || null
+        } else {
+          formatType = 'manual'
         }
-      }
 
-      // Crear contenido para cada día hábil
-      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        const dayOfWeekJS = d.getDay() // 0=Sunday, 1=Monday, etc.
+        const contentRecord = await prisma.content_generated.create({
+          data: {
+            theme_id: newTheme.id,
+            day_of_week: dayOfWeekJS,
+            content_type: singleDayContentType,
+            scheduled_time: new Date('2000-01-01T10:00:00'),
+            scheduled_date: new Date(startDate),
+            social_networks: ['instagram', 'facebook'],
+            status: 'pending',
+            format_id: formatId,
+            image_format_id: imageFormatId,
+            format_type: formatType,
+            is_primary: true,
+            usage_context: 'main_content',
+            generation_params: {}
+          }
+        })
 
-        // Solo días hábiles (1-5) - convertir de JS (0-6) a formato (1-5)
-        if (dayOfWeekJS >= 1 && dayOfWeekJS <= 5) {
-          const dayConfig = weeklyContentSchedule[dayOfWeekJS as keyof typeof weeklyContentSchedule]
+        contentRecords.push(contentRecord)
+        console.log(`✅ Single day content created:`, singleDayContentType)
+      } else {
+        console.log('📅 Usando plantilla semanal automática (no es día único o no hay tipo personalizado)')
 
-          if (dayConfig) {
-            const contentRecord = await prisma.content_generated.create({
-              data: {
-                theme_id: newTheme.id,
-                day_of_week: dayOfWeekJS,
-                content_type: dayConfig.contentType,
-                scheduled_time: new Date(`2000-01-01T${dayConfig.scheduledTime}`),
-                scheduled_date: new Date(d),
-                social_networks: dayConfig.socialNetworks,
-                status: 'pending',
-                format_id: 'formatId' in dayConfig ? dayConfig.formatId : null,
-                image_format_id: 'imageFormatId' in dayConfig ? dayConfig.imageFormatId : null,
-                format_type: 'formatId' in dayConfig ? 'video' : ('imageFormatId' in dayConfig ? 'image' : 'manual'),
-                is_primary: true,
-                usage_context: 'main_content',
-                generation_params: {}
-              }
-            })
+        // 📅 Lógica original para temáticas de múltiples días
+        // Configuración de contenido por día de la semana
+        const weeklyContentSchedule = {
+          1: { // Lunes
+            contentType: 'video_person',
+            scheduledTime: '10:00:00',
+            socialNetworks: ['instagram', 'facebook'],
+            formatId: 9
+          },
+          2: { // Martes
+            contentType: 'image_stats',
+            scheduledTime: '11:00:00',
+            socialNetworks: ['instagram', 'facebook'],
+            imageFormatId: 12
+          },
+          3: { // Miércoles
+            contentType: 'video_avatar',
+            scheduledTime: '13:00:00',
+            socialNetworks: ['instagram', 'facebook'],
+            formatId: 10
+          },
+          4: { // Jueves
+            contentType: 'cta_post',
+            scheduledTime: '11:30:00',
+            socialNetworks: ['instagram', 'facebook'],
+            formatId: 11
+          },
+          5: { // Viernes
+            contentType: 'content_manual',
+            scheduledTime: '10:00:00',
+            socialNetworks: ['instagram', 'facebook'],
+            imageFormatId: 13
+          }
+        }
 
-            contentRecords.push(contentRecord)
-            console.log(`✅ Content created for today ${dayOfWeekJS}:`, dayConfig.contentType)
+        // Crear contenido para cada día hábil
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+          const dayOfWeekJS = d.getDay() // 0=Sunday, 1=Monday, etc.
+
+          // Solo días hábiles (1-5) - convertir de JS (0-6) a formato (1-5)
+          if (dayOfWeekJS >= 1 && dayOfWeekJS <= 5) {
+            const dayConfig = weeklyContentSchedule[dayOfWeekJS as keyof typeof weeklyContentSchedule]
+
+            if (dayConfig) {
+              const contentRecord = await prisma.content_generated.create({
+                data: {
+                  theme_id: newTheme.id,
+                  day_of_week: dayOfWeekJS,
+                  content_type: dayConfig.contentType,
+                  scheduled_time: new Date(`2000-01-01T${dayConfig.scheduledTime}`),
+                  scheduled_date: new Date(d),
+                  social_networks: dayConfig.socialNetworks,
+                  status: 'pending',
+                  format_id: 'formatId' in dayConfig ? dayConfig.formatId : null,
+                  image_format_id: 'imageFormatId' in dayConfig ? dayConfig.imageFormatId : null,
+                  format_type: 'formatId' in dayConfig ? 'video' : ('imageFormatId' in dayConfig ? 'image' : 'manual'),
+                  is_primary: true,
+                  usage_context: 'main_content',
+                  generation_params: {}
+                }
+              })
+
+              contentRecords.push(contentRecord)
+              console.log(`✅ Content created for today ${dayOfWeekJS}:`, dayConfig.contentType)
+            }
           }
         }
       }

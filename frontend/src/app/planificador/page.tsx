@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { useHydration } from '../../hooks/use-hydration';
-import { ThemePlanning, useThemes } from '../../hooks/use-themes';
+import { SINGLE_DAY_CONTENT_TYPES, ThemePlanning, useThemes } from '../../hooks/use-themes';
 import { buildApiUrl, buildN8nWebhookUrl, config } from '../../lib/config';
 
 // Configurar moment en español
@@ -89,13 +89,22 @@ export default function PlanificadorPage() {
   const [loadingContent, setLoadingContent] = useState(false)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [currentView, setCurrentView] = useState('month')
-  const [themeForm, setThemeForm] = useState({
+  const [themeForm, setThemeForm] = useState<{
+    themeName: string
+    themeDescription: string
+    startDate: string
+    endDate: string
+    singleDayContentType?: 'video_person' | 'image_stats' | 'video_avatar' | 'cta_post' | 'content_manual'
+    singleDayFormatId?: number
+    singleDayImageFormatId?: number
+  }>({
     themeName: '',
     themeDescription: '',
     startDate: '',
     endDate: ''
   })
   const [showHelpCollapsed, setShowHelpCollapsed] = useState(true) // Inicia colapsado
+  const [showWeeklyTemplate, setShowWeeklyTemplate] = useState(false) // Plantilla colapsada por defecto
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [themeToDelete, setThemeToDelete] = useState<ThemePlanning | null>(null)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -120,7 +129,8 @@ export default function PlanificadorPage() {
     deleteTheme,
     validateDateRange,
     detectConflicts,
-    generateCalendarEvents
+    generateCalendarEvents,
+    isSingleDayTheme
   } = useThemes()
 
   // Cargar todos los contenidos generados para todas las temáticas
@@ -194,11 +204,11 @@ export default function PlanificadorPage() {
   }
 
   // Cargar contenido específico del día seleccionado
-  const loadCurrentDayContent = async (themeId: string, scheduledDate: string, contentType: string) => {
+  const loadCurrentDayContent = async (themeId: string, scheduledDate: string) => {
 
     // ✅ Validar parámetros antes de hacer la llamada
-    if (!themeId || !scheduledDate || !contentType) {
-      console.warn('⚠️ Parámetros inválidos para loadCurrentDayContent:', { themeId, scheduledDate, contentType })
+    if (!themeId || !scheduledDate) {
+      console.warn('⚠️ Parámetros inválidos para loadCurrentDayContent:', { themeId, scheduledDate })
       setCurrentDayContent(null)
       return null
     }
@@ -207,10 +217,9 @@ export default function PlanificadorPage() {
     try {
       // Normalizar fecha a formato YYYY-MM-DD
       const normalizedDate = scheduledDate.split('T')[0]
-      const dbContentType = contentType
 
-      // Usar scheduled_date en lugar de day_of_week
-      const url = buildApiUrl(`/api/v1/content-generated/?theme_id=${themeId}&scheduled_date=${normalizedDate}&content_type=${dbContentType}`)
+      // 🆕 NO filtrar por content_type para obtener el contenido real de la DB
+      const url = buildApiUrl(`/api/v1/content-generated/?theme_id=${themeId}&scheduled_date=${normalizedDate}`)
 
 
       const response = await fetch(url)
@@ -318,8 +327,7 @@ export default function PlanificadorPage() {
 
     const loadedContent = await loadCurrentDayContent(
       selectedTheme.id,
-      dateString,
-      selectedTheme.dayContent.type
+      dateString
     )
 
     setIsGenerating(true)
@@ -436,8 +444,7 @@ export default function PlanificadorPage() {
           const dateString = selectedTheme.selectedDate.toISOString()
           await loadCurrentDayContent(
             selectedTheme.id,
-            dateString,
-            selectedTheme.dayContent.type
+            dateString
           )
         }
       }, 2000)
@@ -479,8 +486,7 @@ export default function PlanificadorPage() {
 
       loadCurrentDayContent(
         selectedThemeData.id,
-        dateString,
-        selectedThemeData.dayContent.type
+        dateString
       )
     }
 
@@ -503,6 +509,14 @@ export default function PlanificadorPage() {
       return
     }
 
+    // 🆕 Validar que se seleccione tipo de contenido para temáticas de 1 día
+    if (isSingleDayTheme(themeForm.startDate, themeForm.endDate)) {
+      if (!themeForm.singleDayContentType || themeForm.singleDayContentType.trim() === '') {
+        alert('⚠️ Please select a content type for single day themes')
+        return
+      }
+    }
+
     // Detectar conflictos
     const conflicts = detectConflicts(themeForm.startDate, themeForm.endDate)
     if (conflicts.length > 0) {
@@ -511,7 +525,41 @@ export default function PlanificadorPage() {
     }
 
     try {
-      await createTheme(themeForm)
+      // 🆕 Preparar datos del tema - solo incluir campos válidos
+      const themeData: {
+        themeName: string
+        themeDescription: string
+        startDate: string
+        endDate: string
+        singleDayContentType?: 'video_person' | 'image_stats' | 'video_avatar' | 'cta_post' | 'content_manual'
+        singleDayFormatId?: number
+        singleDayImageFormatId?: number
+      } = {
+        themeName: themeForm.themeName,
+        themeDescription: themeForm.themeDescription,
+        startDate: themeForm.startDate,
+        endDate: themeForm.endDate
+      }
+
+      // Si es un solo día y se seleccionó tipo de contenido válido, agregar campos personalizados
+      if (themeForm.singleDayContentType && themeForm.singleDayContentType.trim() !== '' && isSingleDayTheme(themeForm.startDate, themeForm.endDate)) {
+        const selectedType = SINGLE_DAY_CONTENT_TYPES.find(t => t.value === themeForm.singleDayContentType)
+        if (selectedType) {
+          themeData.singleDayContentType = themeForm.singleDayContentType as 'video_person' | 'image_stats' | 'video_avatar' | 'cta_post' | 'content_manual'
+
+          if ('formatId' in selectedType) {
+            themeData.singleDayFormatId = selectedType.formatId
+          }
+          if ('imageFormatId' in selectedType) {
+            themeData.singleDayImageFormatId = selectedType.imageFormatId
+          }
+        }
+      }
+
+      // 🐛 DEBUG: Ver qué se envía al backend
+      console.log('📤 Frontend enviando:', themeData)
+
+      await createTheme(themeData)
       setShowModal(false)
       setThemeForm({ themeName: '', themeDescription: '', startDate: '', endDate: '' })
       alert('Theme created successfully!')
@@ -1292,7 +1340,7 @@ export default function PlanificadorPage() {
         {/* Modal de creación de temática */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full mt-8">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mt-8">
               <div className="border-b border-gray-200 p-6">
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bold text-gray-900">
@@ -1367,20 +1415,82 @@ export default function PlanificadorPage() {
                   />
                 </div>
 
-                {/* Información de la plantilla */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-blue-900 mb-2">
-                    📋 Automatic Weekly Template
-                  </h3>
-                  <ul className="text-xs text-blue-800 space-y-1">
-                    <li>• <strong>Monday:</strong> 24s video with realistic person</li>
-                    <li>• <strong>Tuesday:</strong> Image with statistics</li>
-                    <li>• <strong>Wednesday:</strong> 24s video with Pixar avatar</li>
-                    <li>• <strong>Thursday:</strong> Post with CTA</li>
-                    <li>• <strong>Friday:</strong> Manual content</li>
-                    <li>• <strong>Weekend:</strong> Free</li>
-                  </ul>
-                </div>
+                {/* 🆕 Selector de tipo de contenido (OBLIGATORIO para temáticas de 1 día) */}
+                {themeForm.startDate && themeForm.endDate && isSingleDayTheme(themeForm.startDate, themeForm.endDate) && (
+                  <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 rounded-lg p-4">
+                    <label className="block text-sm font-semibold text-purple-900 mb-3">
+                      🎯 Content Type for Single Day Theme <span className="text-red-600">*</span>
+                    </label>
+                    <select
+                      value={themeForm.singleDayContentType || ''}
+                      onChange={(e) => setThemeForm({
+                        ...themeForm,
+                        singleDayContentType: e.target.value as 'video_person' | 'image_stats' | 'video_avatar' | 'cta_post' | 'content_manual' | undefined
+                      })}
+                      className="text-sm font-medium text-gray-700 w-full px-4 py-2 border-2 border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                      required
+                    >
+                      <option value="">-- Select content type --</option>
+                      {SINGLE_DAY_CONTENT_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                    {themeForm.singleDayContentType && (
+                      <p className="text-xs text-purple-700 mt-2">
+                        ℹ️ {SINGLE_DAY_CONTENT_TYPES.find(t => t.value === themeForm.singleDayContentType)?.description}
+                      </p>
+                    )}
+                    {!themeForm.singleDayContentType && (
+                      <p className="text-xs text-red-600 mt-2">
+                        ⚠️ This field is required for single day themes
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Información de la plantilla - Solo para temáticas de 7 días o más */}
+                {(() => {
+                  if (!themeForm.startDate || !themeForm.endDate) return null
+
+                  const start = new Date(themeForm.startDate)
+                  const end = new Date(themeForm.endDate)
+                  const diffTime = end.getTime() - start.getTime()
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+                  // Solo mostrar si la temática es de 7 días o más
+                  if (diffDays < 7) return null
+
+                  return (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <button
+                        type="button"
+                        onClick={() => setShowWeeklyTemplate(!showWeeklyTemplate)}
+                        className="w-full flex justify-between items-center text-left hover:opacity-80 transition-opacity"
+                      >
+                        <h3 className="text-sm font-semibold text-blue-900">
+                          📋 Automatic Weekly Template
+                        </h3>
+                        <span className="text-blue-600 text-lg transition-transform duration-200" style={{
+                          transform: showWeeklyTemplate ? 'rotate(90deg)' : 'rotate(0deg)'
+                        }}>
+                          ▶
+                        </span>
+                      </button>
+                      <div className={`overflow-hidden transition-all duration-300 ${showWeeklyTemplate ? 'max-h-96 opacity-100 mt-2' : 'max-h-0 opacity-0'}`}>
+                        <ul className="text-xs text-blue-800 space-y-1">
+                          <li>• <strong>Monday:</strong> 24s video with realistic person</li>
+                          <li>• <strong>Tuesday:</strong> Image with statistics</li>
+                          <li>• <strong>Wednesday:</strong> 24s video with Pixar avatar</li>
+                          <li>• <strong>Thursday:</strong> Post with CTA</li>
+                          <li>• <strong>Friday:</strong> Manual content</li>
+                          <li>• <strong>Weekend:</strong> Free</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {/* Botones */}
                 <div className="flex gap-3 pt-4">
@@ -1414,14 +1524,7 @@ export default function PlanificadorPage() {
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">
                       {selectedTheme.dayContent ? (
-                        <>
-                          {selectedTheme.dayContent.type === 'video_person' && '🎬'}
-                          {selectedTheme.dayContent.type === 'image_stats' && '🖼️'}
-                          {selectedTheme.dayContent.type === 'video_avatar' && '🎭'}
-                          {selectedTheme.dayContent.type === 'cta_post' && '📢'}
-                          {selectedTheme.dayContent.type === 'content_manual' && '✏️'}
-                          {' '}{selectedTheme.dayContent.title}
-                        </>
+                        selectedTheme.dayContent.title
                       ) : (
                         `🎯 ${selectedTheme.themeName}`
                       )}

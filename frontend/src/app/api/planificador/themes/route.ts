@@ -117,9 +117,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar rango de fechas
-    const start = new Date(startDate)
-    const end = new Date(endDate)
+    // Parsear fechas en zona horaria local (no UTC)
+    // Agregar 'T00:00:00' para forzar interpretación local
+    const start = new Date(startDate + 'T00:00:00')
+    const end = new Date(endDate + 'T00:00:00')
+
+    // Normalizar 'today' a medianoche en zona horaria local
     const today = new Date()
+    today.setHours(0, 0, 0, 0)
 
     if (start < today) {
       return NextResponse.json(

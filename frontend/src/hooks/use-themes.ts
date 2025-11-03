@@ -273,9 +273,14 @@ export const useThemes = () => {
 
   // Validar rango de fechas
   const validateDateRange = (startDate: string, endDate: string): { valid: boolean; message?: string } => {
-    const start = new Date(startDate)
-    const end = new Date(endDate)
+    // Parsear fechas en zona horaria local (no UTC)
+    // Agregar 'T00:00:00' para forzar interpretación local
+    const start = new Date(startDate + 'T00:00:00')
+    const end = new Date(endDate + 'T00:00:00')
+
+    // Normalizar 'today' a medianoche en zona horaria local
     const today = new Date()
+    today.setHours(0, 0, 0, 0)
 
     // Validar que las fechas sean válidas
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
@@ -292,7 +297,8 @@ export const useThemes = () => {
       return { valid: false, message: 'End date cannot be before start date' }
     }
 
-    // Calcular diferencia en días
+    // Calcular diferencia en díasexit
+
     const diffTime = end.getTime() - start.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 

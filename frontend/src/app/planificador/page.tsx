@@ -264,8 +264,9 @@ export default function PlanificadorPage() {
       setThemeToDelete(null)
       alert(`✅ Theme "${themeToDelete.themeName}" deleted successfully`)
     } catch (error) {
-      console.error('Error deleting theme:', error)
-      alert('❌ Error deleting theme')
+      console.error('❌ Error deleting theme:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`❌ Error deleting theme: ${errorMessage}`)
     }
   }
 

@@ -432,9 +432,12 @@ export async function DELETE(request: NextRequest) {
     )
 
   } catch (error) {
-    console.error('Error deleting theme:', error)
+    console.error('❌ Error deleting theme:', error)
+    // Proveer más detalles del error para debugging
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('❌ Error details:', errorMessage)
     return NextResponse.json(
-      { error: 'Error deleting theme' },
+      { error: 'Error deleting theme', details: errorMessage },
       { status: 500 }
     )
   }

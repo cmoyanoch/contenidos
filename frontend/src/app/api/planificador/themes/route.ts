@@ -228,14 +228,26 @@ export async function POST(request: NextRequest) {
         let formatId = null
         let imageFormatId = null
 
-        if (singleDayContentType === 'video_person' || singleDayContentType === 'video_avatar') {
+        // 🆕 Asignación completa de todos los tipos de contenido
+        // NOTA: DB constraint solo acepta format_type = 'video' | 'image'
+        if (singleDayContentType === 'video_person') {
           formatType = 'video'
-          formatId = singleDayFormatId || null
+          formatId = 9  // Video with realistic person
+        } else if (singleDayContentType === 'video_avatar') {
+          formatType = 'video'
+          formatId = 10  // Video with animated avatar
         } else if (singleDayContentType === 'image_stats') {
           formatType = 'image'
-          imageFormatId = singleDayImageFormatId || null
+          imageFormatId = 12  // Image with statistics
+        } else if (singleDayContentType === 'cta_post') {
+          formatType = 'image'
+          formatId = 11  // Post with CTA
+        } else if (singleDayContentType === 'content_manual') {
+          formatType = 'image'  // 🐛 FIX: DB constraint no acepta 'manual', usar 'image'
+          imageFormatId = 13  // Manual content
         } else {
-          formatType = 'manual'
+          // Fallback default
+          formatType = 'image'  // 🐛 FIX: DB constraint no acepta 'manual'
         }
 
         const contentRecord = await prisma.content_generated.create({

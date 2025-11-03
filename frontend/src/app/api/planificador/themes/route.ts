@@ -412,7 +412,14 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    // Eliminar la temática
+    // 🆕 Primero eliminar contenido generado relacionado (foreign key)
+    await prisma.content_generated.deleteMany({
+      where: {
+        theme_id: id
+      }
+    })
+
+    // Luego eliminar la temática
     await prisma.themePlanning.delete({
       where: {
         id

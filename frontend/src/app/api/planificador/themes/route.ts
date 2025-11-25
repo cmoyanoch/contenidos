@@ -333,7 +333,7 @@ export async function POST(request: NextRequest) {
                   status: 'pending',
                   format_id: 'formatId' in dayConfig ? dayConfig.formatId : null,
                   image_format_id: 'imageFormatId' in dayConfig ? dayConfig.imageFormatId : null,
-                  format_type: 'formatId' in dayConfig ? 'video' : ('imageFormatId' in dayConfig ? 'image' : 'manual'),
+                  format_type: 'formatId' in dayConfig ? 'video' : ('imageFormatId' in dayConfig ? 'image' : 'image'), // DB solo acepta 'video' o 'image'
                   is_primary: true,
                   usage_context: 'main_content',
                   generation_params: {}
@@ -356,9 +356,28 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newTheme, { status: 201 })
   } catch (error) {
+    // Log detallado del error para diagnóstico
     console.error('❌ Error creating theme:', error)
+
+    // Detalles adicionales del error
+    const errorDetails = error instanceof Error ? {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    } : String(error)
+
+    console.error('❌ Error details:', JSON.stringify(errorDetails, null, 2))
+
+    // Retornar error más descriptivo
     return NextResponse.json(
-      { error: '❌ Error creating theme' },
+      {
+        error: '❌ Error creating theme',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        // En desarrollo, incluir más detalles
+        ...(process.env.NODE_ENV === 'development' && {
+          fullError: errorDetails
+        })
+      },
       { status: 500 }
     )
   }

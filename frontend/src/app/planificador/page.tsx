@@ -438,6 +438,8 @@ export default function PlanificadorPage() {
 
       const result = await response.json()
 
+      // Imprimir el objeto result en la consola de diferentes formas
+      console.log('📋 Respuesta formateada (JSON):', JSON.stringify(result, null, 2))
 
       // Actualizar el contenido del día después de un breve delay
       setTimeout(async () => {
@@ -450,7 +452,14 @@ export default function PlanificadorPage() {
         }
       }, 2000)
 
-      alert('✅ Content generation in progress! N8N workflow has been activated.')
+      if (result.code != 200) {
+       alert('✅ Webhook response: '+result.msg)
+
+      }else{
+      alert('✅ Content generation in progress! N8N workflow has been activated. ')
+
+      }
+
 
     } catch (error) {
       console.error('❌ Error generando contenido:', error)
